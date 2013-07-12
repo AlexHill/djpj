@@ -123,6 +123,69 @@ Which would require the following in your template:
     ...
     ...
 
+Using the pjax_block decorator
+------------------------------
+
+If you don't want to add any new templates at all, you can use the ``pjax_block``
+decorator on a view to specify the name of a single block in your template to
+return to PJAX requests.
+
+Say you want to use PJAX to load different blog posts. Your template might look
+like this::
+
+    <header>...</header>
+
+    <article>
+    {% block blog_post %}
+    ...
+    {% endblock %}
+    </article>
+
+    <footer>...</footer>
+
+Then you could write the following view::
+
+    from djpjax import pjax_block
+
+    @pjax_block("blog_post")
+    def my_view(request)
+        context = ...
+        return TemplateResponse(request, "template.html", context)
+
+Now this view will respond to PJAX requests with only the content of the
+``blog_post`` block.
+
+**Including a page title in the PJAX response**
+
+A nice feature of the PJAX library is that it correctly updates the page title
+when new content is loaded. It achieves this by looking for a ``<title>`` tag
+in the HTML response. Of course, it's unlikely that your template's ``<title>``
+tag is going to be inside the block that you choose to return - if it is, you
+should probably rethink the way you're using PJAX!
+
+The ``pjax_block`` decorator solves this problem by allowing you to specify either
+a context variable or a template block containing your page's title text, using
+the ``title_variable`` or ``title_block`` arguments. If you pass both arguments to
+``pjax_block`` at the same time, you'll get an exception.
+
+Say you assigned your title to a context variable called ``post_title``, and you
+want the contents of that context variable to be used by PJAX as the page title.
+Your view would look like this::
+
+    from djpjax import pjax_block
+
+    @pjax_block("blog_post", title_variable="post_title")
+    def my_view(request)
+        context = {"post_title": "My First Blog Post", ...}
+        return TemplateResponse(request, "template.html", context)
+
+The way ``title_block`` works is very similar. If your template has a block named
+"page_title" containing your title text, your decorator line should look like this::
+
+    @pjax_block("blog_post", title_block="page_title")
+
+This is useful if your page titles are rendered using template tags or multiple
+context variables.
  
 Testing
 -------
