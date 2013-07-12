@@ -5,13 +5,64 @@ import djpjax
 from django.template.response import TemplateResponse
 from django.test.client import RequestFactory
 from django.views.generic import View
+from django.template import Template, TemplateSyntaxError
+
+from nose.tools import raises
 
 # A couple of request objects - one PJAX, one not.
 rf = RequestFactory()
 regular_request = rf.get('/')
 pjax_request = rf.get('/', HTTP_X_PJAX=True)
 
+# A template to test the pjax_block decorator.
+template = Template(
+    "{% block title %}Block Title{% endblock %}"
+    "Some text outside the main block."
+    "{% with footwear='galoshes' %}"
+    "{% block main %}I'm wearing {{ colour }} {{ footwear }}{% endblock %}"
+    "{% endwith %}"
+    "More text outside the main block.")
+
 # Tests.
+
+def test_pjax_block():
+    resp = view_pjax_block(pjax_request)
+    result = resp.rendered_content
+    assert result == "I'm wearing orange galoshes"
+
+@raises(TemplateSyntaxError)
+def test_pjax_block_error():
+    resp = view_pjax_block_error(pjax_request)
+    result = resp.rendered_content
+
+def test_pjax_block_title_variable():
+    resp = view_pjax_block_title_variable(pjax_request)
+    result = resp.rendered_content
+    assert result == ("<title>Variable Title</title>\n"
+                      "I'm wearing orange galoshes")
+
+@raises(KeyError)
+def test_pjax_block_title_variable_error():
+    resp = view_pjax_block_title_variable_error(pjax_request)
+    result = resp.rendered_content
+
+def test_pjax_block_title_block():
+    resp = view_pjax_block_title_block(pjax_request)
+    result = resp.rendered_content
+    assert result == ("<title>Block Title</title>\n"
+                      "I'm wearing orange galoshes")
+
+@raises(TemplateSyntaxError)
+def test_pjax_block_title_block_error():
+    resp = view_pjax_block_title_block_error(pjax_request)
+    result = resp.rendered_content
+
+@raises(TypeError)
+def test_pjax_block_title_conflict():
+    @djpjax.pjax_block("main", title_variable="title", title_block="title")
+    def view_pjax_block_title_conflict(request):
+        return TemplateResponse(request, template, {"colour": "orange",
+                                                    "title": "Variable Title"})
 
 def test_pjax_sans_template():
     resp = view_sans_pjax_template(regular_request)
@@ -91,6 +142,32 @@ def test_pjaxtend_custom_context():
     assert resp.context_data['my_parent'] == "parent-pjax.html"
 
 # The test "views" themselves.
+
+@djpjax.pjax_block("main")
+def view_pjax_block(request):
+    return TemplateResponse(request, template, {"colour": "orange"})
+
+@djpjax.pjax_block("main_missing")
+def view_pjax_block_error(request):
+    return TemplateResponse(request, template, {"colour": "orange"})
+
+@djpjax.pjax_block("main", title_block="title")
+def view_pjax_block_title_block(request):
+    return TemplateResponse(request, template, {"colour": "orange"})
+
+@djpjax.pjax_block("main", title_block="title_missing")
+def view_pjax_block_title_block_error(request):
+    return TemplateResponse(request, template, {"colour": "orange"})
+
+@djpjax.pjax_block("main", title_variable="title")
+def view_pjax_block_title_variable(request):
+    return TemplateResponse(request, template, {"colour": "orange",
+                                                "title": "Variable Title"})
+
+@djpjax.pjax_block("main", title_variable="title_missing")
+def view_pjax_block_title_variable_error(request):
+    return TemplateResponse(request, template, {"colour": "orange",
+                                                "title": "Variable Title"})
 
 @djpjax.pjax()
 def view_sans_pjax_template(request):
