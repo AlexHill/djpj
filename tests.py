@@ -33,29 +33,27 @@ def test_pjax_block():
 @raises(TemplateSyntaxError)
 def test_pjax_block_error():
     resp = view_pjax_block_error(pjax_request)
-    result = resp.rendered_content
+    _ = resp.rendered_content
 
 def test_pjax_block_title_variable():
     resp = view_pjax_block_title_variable(pjax_request)
     result = resp.rendered_content
-    assert result == ("<title>Variable Title</title>\n"
-                      "I'm wearing orange galoshes")
+    assert result == "<title>Variable Title</title>\nI'm wearing orange galoshes"
 
 @raises(KeyError)
 def test_pjax_block_title_variable_error():
     resp = view_pjax_block_title_variable_error(pjax_request)
-    result = resp.rendered_content
+    _ = resp.rendered_content
 
 def test_pjax_block_title_block():
     resp = view_pjax_block_title_block(pjax_request)
     result = resp.rendered_content
-    assert result == ("<title>Block Title</title>\n"
-                      "I'm wearing orange galoshes")
+    assert result == "<title>Block Title</title>\nI'm wearing orange galoshes"
 
 @raises(TemplateSyntaxError)
 def test_pjax_block_title_block_error():
     resp = view_pjax_block_title_block_error(pjax_request)
-    result = resp.rendered_content
+    _ = resp.rendered_content
 
 @raises(TypeError)
 def test_pjax_block_title_conflict():

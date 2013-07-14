@@ -4,74 +4,79 @@ from types import MethodType
 
 from django.views.generic.base import TemplateResponseMixin
 from django.template.response import TemplateResponse
-from django.template import Template, NodeList, TemplateSyntaxError
+from django.template import TemplateSyntaxError
 from django.template.loader_tags import BlockNode
 
 
-class SingleBlockTemplateResponse(TemplateResponse):
+class PJAXBlockTemplateResponse(TemplateResponse):
 
     @property
     def rendered_content(self):
         """
-        Patch the template's node tree, replacing the render method on the
-        target block node with one that captures its contents, and on each
-        leaf node outside of the target node's subtree with a method that
-        returns an empty string.
+        Walk the template's node tree, replacing the render method on the
+        target block node (and optionally, the title block node) with one
+        that captures its contents. Then we render the template as normal,
+        but instead of returning the result, return the captured output
+        from our target block(s).
         """
         template = self.resolve_template(self.template_name)
         context = self.resolve_context(self.context_data)
 
-        target_block_content = []
-        title = []
-        if self.title_variable:
-            title.append(context[self.title_variable])
+        captured_blocks = dict()
 
-        def return_empty_string(node, _): return ""
+        def capture_method_output(obj, method, callback):
+            """
+            Intercept the output of an instance method, by replacing it with
+            a new method which passes the return value to a callback before
+            returning it.
+            """
+            old_method = getattr(obj, method)
+            def replacement_fn(_, *args, **kwargs):
+                output = old_method(*args, **kwargs)
+                callback(output)
+                return output
+            setattr(obj, method, MethodType(replacement_fn, obj))
+
+        target_blocks = filter(None, (self.block_name, self.title_block))
 
         def patch_tree(nodelist):
             for node in nodelist:
-                if isinstance(node, BlockNode):
-                    if node.name == self.block_name:
-                        # Replace the target block's render method with one
-                        # that captures the its content in target_block_content.
-                        old_render_func = node.render
-                        def render_target_block(node, context):
-                            content = old_render_func(context)
-                            target_block_content.append(content)
-                            return content
-                        node.render = MethodType(render_target_block, node)
-                    elif node.name == self.title_block:
-                        title_render_func = node.render
-                        def render_title_block(node, context):
-                            title_content = title_render_func(context)
-                            title.append(title_content)
-                            return title_content
-                        node.render = MethodType(render_title_block, node)
+                if isinstance(node, BlockNode) and node.name in target_blocks:
+                    callback = functools.partial(captured_blocks.__setitem__,
+                                                 node.name)
+                    capture_method_output(node.nodelist, "render", callback)
                 else:
                     if hasattr(node, "nodelist"):
                         patch_tree(node.nodelist)
-                    else:
-                        # Don't waste time rendering irrelevant leaf nodes.
-                        node.render = MethodType(return_empty_string, node)
+
         patch_tree(template.nodelist)
 
-        # Render the template, but ignore its output. We will return the
-        # captured output from the target and optionally the title blocks.
-        _ = template.render(context)
+        # Render the template, but ignore its return value.
+        # We will return the captured output from the target
+        # and optionally the title blocks.
+        template.render(context)
 
-        if not target_block_content:
-            raise TemplateSyntaxError("Target PJAX block does not exist")
-        if not title:
-            if self.title_block:
-                raise TemplateSyntaxError(
-                    "Named PJAX target block '%s' does not exist" % self.title_block)
-            elif self.title_variable:
-                raise ValueError(
-                    "PJAX title variable '%s' not found in context" % self.title_variable)
-            title_html = ""
+        try:
+            target_block_content = captured_blocks[self.block_name]
+        except KeyError:
+            raise TemplateSyntaxError("Target PJAX block '%s' does not exist" % self.block_name)
+
+        if self.title_block:
+            try:
+                title = captured_blocks[self.title_block]
+            except KeyError:
+                raise TemplateSyntaxError("Named PJAX target block '%s' does not exist" % self.title_block)
+        elif self.title_variable:
+            try:
+                title = context[self.title_variable]
+            except KeyError:
+                raise KeyError("PJAX title variable '%s' not found in context" % self.title_variable)
         else:
-            title_html = "<title>%s</title>\n" % title[0] if title else ""
-        return title_html + target_block_content[0]
+            title = None
+
+        title_html = "<title>%s</title>\n" % title if title else ""
+
+        return title_html + target_block_content
 
 
 def pjax_block(block, title_variable=None, title_block=None):
@@ -83,8 +88,7 @@ def pjax_block(block, title_variable=None, title_block=None):
         def _view(request, *args, **kwargs):
             resp = view(request, *args, **kwargs)
             if request.META.get('HTTP_X_PJAX', False):
-                from django.template.defaulttags import WithNode
-                resp.__class__ = SingleBlockTemplateResponse
+                resp.__class__ = PJAXBlockTemplateResponse
                 resp.block_name = block
                 resp.title_variable = title_variable
                 resp.title_block = title_block
