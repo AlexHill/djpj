@@ -1,11 +1,25 @@
 import functools
 
-from types import MethodType
-
 from django.views.generic.base import TemplateResponseMixin
 from django.template.response import TemplateResponse
-from django.template import TemplateSyntaxError
+from django.template import TemplateSyntaxError, NodeList
 from django.template.loader_tags import BlockNode
+
+
+class PJAXBlockNodeList(NodeList):
+    """
+    When using the pjax_block decorator, matching blocks' nodelists are set
+    to this class. The overridden render method stores the block's output in
+    the render context for later retrieval, before returning as normal.
+    """
+
+    def render(self, context):
+        result = super(PJAXBlockNodeList, self).render(context)
+        try:
+            context.render_context["pjax_captured_blocks"][self.block_name] = result
+        except KeyError:
+            pass
+        return result
 
 
 class PJAXBlockTemplateResponse(TemplateResponse):
@@ -13,64 +27,55 @@ class PJAXBlockTemplateResponse(TemplateResponse):
     @property
     def rendered_content(self):
         """
-        Walk the template's node tree, replacing the render method on the
-        target block node (and optionally, the title block node) with one
-        that captures its contents. Then we render the template as normal,
-        but instead of returning the result, return the captured output
-        from our target block(s).
+        Walk the template's node tree, casting our target blocks' nodelists to
+        PJAXBlockNodeList in order to store its output in the render context.
+        Then render the template as usual, but instead of returning the result,
+        return the captured output from our target block(s).
         """
         template = self.resolve_template(self.template_name)
         context = self.resolve_context(self.context_data)
 
         captured_blocks = dict()
+        context.render_context["pjax_captured_blocks"] = captured_blocks
 
-        def capture_method_output(obj, method, callback):
-            """
-            Intercept the output of an instance method, by replacing it with
-            a new method which passes the return value to a callback before
-            returning it.
-            """
-            old_method = getattr(obj, method)
-            def replacement_fn(_, *args, **kwargs):
-                output = old_method(*args, **kwargs)
-                callback(output)
-                return output
-            setattr(obj, method, MethodType(replacement_fn, obj))
-
-        target_blocks = filter(None, (self.block_name, self.title_block))
+        target_blocks = [n for n in (self.block_name, self.title_block) if n]
 
         def patch_tree(nodelist):
             for node in nodelist:
                 if isinstance(node, BlockNode) and node.name in target_blocks:
-                    callback = functools.partial(captured_blocks.__setitem__,
-                                                 node.name)
-                    capture_method_output(node.nodelist, "render", callback)
+                    node.nodelist.__class__ = PJAXBlockNodeList
+                    node.nodelist.block_name = node.name
                 else:
                     if hasattr(node, "nodelist"):
                         patch_tree(node.nodelist)
 
         patch_tree(template.nodelist)
 
-        # Render the template, but ignore its return value.
-        # We will return the captured output from the target
-        # and optionally the title blocks.
+        # Render the template, but ignore its return value. We will return the
+        # captured output from the target and optionally the title blocks.
         template.render(context)
 
         try:
             target_block_content = captured_blocks[self.block_name]
         except KeyError:
-            raise TemplateSyntaxError("Target PJAX block '%s' does not exist" % self.block_name)
+            raise TemplateSyntaxError(
+                "PJAX block '%s' does not exist or was not rendered"
+                % self.block_name)
 
         if self.title_block:
             try:
                 title = captured_blocks[self.title_block]
             except KeyError:
-                raise TemplateSyntaxError("Named PJAX target block '%s' does not exist" % self.title_block)
+                raise TemplateSyntaxError(
+                    "PJAX title block '%s' does not exist or was not rendered"
+                    % self.title_block)
         elif self.title_variable:
             try:
                 title = context[self.title_variable]
             except KeyError:
-                raise KeyError("PJAX title variable '%s' not found in context" % self.title_variable)
+                raise KeyError(
+                    "PJAX title variable '%s' not found in context"
+                    % self.title_variable)
         else:
             title = None
 
