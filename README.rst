@@ -156,6 +156,16 @@ or if a CSS selector other than a simple ``#<id>`` selector is found in the
 request when no block name has been passed to ``pjax_block``, an exception
 will be raised.
 
+Considerations
+==============
+
+I haven't addressed caching yet; that's next on the list.
+
+Any performance benefits are strictly client-side using this package;
+performance on the server side will be strictly equal to or worse than simply
+rendering the full template at this stage, since the full template is actually
+rendered with the irrelevant parts discarded. This may change in the future.
+
 
 Testing
 =======
