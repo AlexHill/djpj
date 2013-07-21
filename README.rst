@@ -4,16 +4,18 @@ Django-PJAX-Blocks
 This is a Django helper for `defunkt's jquery-pjax`__, which allows you to
 specify a template block to be served to PJAX requests for each view.
 
+__ https://github.com/defunkt/jquery-pjax
+
+
 Django-PJAX-Blocks is adapted from Jacob Kaplan-Moss' `Django-PJAX`__. Use
 Django-PJAX if you want to serve PJAX content from separate templates, or if
 you want your PJAX responses to inherit from a separate base template.
 
+__ https://github.com/jacobian/django-pjax
+
+
 What's PJAX?
 ------------
-
-__ https://github.com/defunkt/jquery-pjax
-
-__ https://github.com/jacobian/django-pjax
 
 PJAX is essentially AHAH__ ("Asynchronous HTML and HTTP"), except with real
 permalinks and a working back button. It lets you load just a portion of a
@@ -35,6 +37,8 @@ __ https://github.com/defunkt/jquery-pjax
 
 Next, make sure the views you're PJAXing are using TemplateResponse__. You
 can't use Django-PJAX-Blocks with a normal ``HttpResponse``; only ``TemplateResponse``.
+
+__ https://docs.djangoproject.com/en/dev/ref/template-response/
 
 Now decorate your views with ``pjax_block`` to specify the name of a single
 block in your template to return to PJAX requests.
