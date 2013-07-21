@@ -1,6 +1,6 @@
 import functools
-
-from django.views.generic.base import TemplateResponseMixin
+import re
+from django.http.request import HttpRequest
 from django.template.response import TemplateResponse
 from django.template import TemplateSyntaxError, NodeList
 from django.template.loader_tags import BlockNode
@@ -84,7 +84,32 @@ class PJAXBlockTemplateResponse(TemplateResponse):
         return title_html + target_block_content
 
 
-def pjax_block(block, title_variable=None, title_block=None):
+_container_re = re.compile(r'^#\S+$')
+
+
+def _pjax_container_from_get(request):
+    return request.GET.get("_pjax", None)
+
+
+def _pjax_container_from_header(request):
+    return request.META.get("HTTP_X_PJAX_CONTAINER", None)
+
+
+def _pjax_block_from_request(request):
+    container = (_pjax_container_from_header(request) or
+                 _pjax_container_from_get(request))
+    if container:
+        if _container_re.match(container):
+            return container[1:]
+        else:
+            raise ValueError("Invalid PJAX selector '%s' found in request: "
+                             "must be a simple ID selector of the form #<id>."
+                             % container)
+    else:
+        return None
+
+
+def pjax_block(block=None, title_variable=None, title_block=None):
     if title_variable and title_block:
         raise TypeError("Only one of 'title_variable' and 'title_block' "
                         "may be passed to pjax decorator.")
@@ -93,74 +118,16 @@ def pjax_block(block, title_variable=None, title_block=None):
         def _view(request, *args, **kwargs):
             resp = view(request, *args, **kwargs)
             if request.META.get('HTTP_X_PJAX', False):
+                block_name = block or _pjax_block_from_request(request)
+                if not block_name:
+                    raise ValueError(
+                        "A PJAX block name must be supplied, either by the "
+                        "`block` argument, the X-PJAX-Container HTTP header "
+                        "or the _pjax GET parameter.")
                 resp.__class__ = PJAXBlockTemplateResponse
-                resp.block_name = block
+                resp.block_name = block_name
                 resp.title_variable = title_variable
                 resp.title_block = title_block
             return resp
         return _view
     return pjax_decorator
-
-def pjax(pjax_template=None):
-    def pjax_decorator(view):
-        @functools.wraps(view)
-        def _view(request, *args, **kwargs):
-            resp = view(request, *args, **kwargs)
-            # this is lame. what else though?
-            # if not hasattr(resp, "is_rendered"):
-            #     warnings.warn("@pjax used with non-template-response view")
-            #     return resp
-            if request.META.get('HTTP_X_PJAX', False):
-                if pjax_template:
-                    resp.template_name = pjax_template
-                else:
-                    resp.template_name = _pjaxify_template_var(resp.template_name)
-            return resp
-        return _view
-    return pjax_decorator
-
-def pjaxtend(parent='base.html', pjax_parent='pjax.html', context_var='parent'):
-    def pjaxtend_decorator(view):
-        @functools.wraps(view)
-        def _view(request, *args, **kwargs):
-            resp = view(request, *args, **kwargs)
-            # this is lame. what else though?
-            # if not hasattr(resp, "is_rendered"):
-            #     warnings.warn("@pjax used with non-template-response view")
-            #     return resp
-            if request.META.get('HTTP_X_PJAX', False):
-                resp.context_data[context_var] = pjax_parent
-            elif parent:
-                resp.context_data[context_var] = parent
-            return resp
-        return _view
-    return pjaxtend_decorator
-
-class PJAXResponseMixin(TemplateResponseMixin):
-
-    pjax_template_name = None
-
-    def get_template_names(self):
-        names = super(PJAXResponseMixin, self).get_template_names()
-        if self.request.META.get('HTTP_X_PJAX', False):
-            if self.pjax_template_name:
-                names = [self.pjax_template_name]
-            else:
-                names = _pjaxify_template_var(names)
-        return names
-
-
-def _pjaxify_template_var(template_var):
-    if isinstance(template_var, (list, tuple)):
-        template_var = type(template_var)(_pjaxify_template_name(name) for name in template_var)
-    elif isinstance(template_var, basestring):
-        template_var = _pjaxify_template_name(template_var)
-    return template_var
-
-
-def _pjaxify_template_name(name):
-    if "." in name:
-        name = "%s-pjax.%s" % tuple(name.rsplit('.', 1))
-    else:
-        name += "-pjax"
-    return name
