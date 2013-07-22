@@ -8,15 +8,15 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name = 'django-pjax',
-    version = '1.2',
-    description = 'A Django helper for jQuery-PJAX.',
+    name = 'django-pjax-blocks',
+    version = '0.1',
+    description = 'A template-block-based Django helper for jQuery-PJAX.',
     license = 'BSD',
     long_description = read('README.rst'),
-    url = 'https://github.com/jacobian/django-pjax',
+    url = 'https://github.com/alexhill/django-pjax-blocks',
 
-    author = 'Jacob Kaplan-Moss',
-    author_email = 'jacob@jacobian.org',
+    author = 'Alex Hill',
+    author_email = 'alex@hill.net.au',
 
     py_modules =  ['djpjax'],
     install_requires = ['django>=1.3'],
@@ -31,6 +31,7 @@ setup(
         'Programming Language :: Python :: 2.5',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python',
     ),
 )
