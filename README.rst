@@ -114,10 +114,9 @@ block to return.
 
 __ https://github.com/defunkt/jquery-pjax#usage
 
-Before you can do this, three things have to be true:
+For this to work, three things have to be true:
 
-* You need to be using a relatively recent version of the jQuery PJAX library.
-`This required feature was added in April 2012`__, so you probably are already.
+* You need to be using a relatively recent version of the jQuery PJAX library. Any version since `this April 2012 commit`__, will work.
 * The container must be specified with a simple CSS ID selector, e.g. ``#main_content``.
 * Your block names must be identical to their containers' IDs.
 
