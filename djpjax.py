@@ -102,6 +102,10 @@ def _pjax_block_from_request(request):
         return None
 
 
+def is_pjax(request):
+    return 'HTTP_X_PJAX' in request.META
+
+
 def pjax_block(block=None, title_variable=None, title_block=None):
     if title_variable and title_block:
         raise TypeError("Only one of 'title_variable' and 'title_block' "
@@ -110,27 +114,25 @@ def pjax_block(block=None, title_variable=None, title_block=None):
     def pjax_decorator(view):
         @functools.wraps(view)
         def wrapped_view(request, *args, **kwargs):
-            resp = view(request, *args, **kwargs)
-            if request.META.get('HTTP_X_PJAX', False):
+            response = view(request, *args, **kwargs)
+            if is_pjax(request):
                 block_name = block or _pjax_block_from_request(request)
                 if not block_name:
                     raise ValueError(
                         "A PJAX block name must be supplied, either by the "
                         "`block` argument or the X-PJAX-Container HTTP header.")
-                resp.__class__ = PJAXBlockTemplateResponse
-                resp.block_name = block_name
-                resp.title_variable = title_variable
-                resp.title_block = title_block
-            return resp
+                response.__class__ = PJAXBlockTemplateResponse
+                response.block_name = block_name
+                response.title_variable = title_variable
+                response.title_block = title_block
+                response['X-PJAX-URL'] = (response.get('Location')
+                                          or request.get_full_path())
+            return response
         return vary_on_headers('X-PJAX-Container')(wrapped_view)
     return pjax_decorator
 
 
 class DjangoPJAXMiddleware(object):
-
-    @staticmethod
-    def is_pjax(request):
-        return 'HTTP_X_PJAX' in request.META
 
     @staticmethod
     def strip_pjax_qs_parameter(url):
@@ -149,16 +151,9 @@ class DjangoPJAXMiddleware(object):
         # unnecessary with the presence of the X-PJAX-Container header,
         # and can cause trouble with code that doesn't expect it, so let's
         # just pretend it never existed.
-        if self.is_pjax(request):
+        if is_pjax(request):
             if '_pjax' in request.GET:
                 with self.mutable_querydict(request.GET) as get:
                     del get['_pjax']
                 request.META['QUERY_STRING'] = \
                     self.strip_pjax_qs_parameter(request.META['QUERY_STRING'])
-
-    def process_response(self, request, response):
-        # Setting this header makes PJAX behave properly with redirects.
-        if self.is_pjax(request):
-            response['X-PJAX-URL'] = (response.get('Location')
-                                      or request.get_full_path())
-        return response

@@ -33,17 +33,14 @@ middleware = djpjax.DjangoPJAXMiddleware()
 # Tests.
 
 def test_pjax_block_from_header():
-    requests = (
-        rf.get('/', data={'_pjax': '#soviet_bloc'}, HTTP_X_PJAX=True),
-        rf.get('/', HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#soviet_bloc"))
-    assert all(djpjax._pjax_block_from_request(r) == "soviet_bloc"
-               for r in requests)
+    req = rf.get('/', HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#soviet_bloc")
+    assert djpjax._pjax_block_from_request(req) == "soviet_bloc"
 
 
 @raises(ValueError)
 def test_pjax_block_invalid_from_header():
-    request = rf.get('/', data={'_pjax': '#soviet .bloc'}, HTTP_X_PJAX=True)
-    _ = djpjax._pjax_block_from_request(request)
+    req = rf.get('/', HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#soviet .bloc")
+    _ = djpjax._pjax_block_from_request(req)
 
 
 @raises(ValueError)
@@ -115,29 +112,31 @@ def test_pjax_block_title_conflict():
     djpjax.pjax_block("main", title_variable="title", title_block="title")(None)
 
 
-def test_pjax_middleware_request():
-    assert middleware.is_pjax(pjax_request) is True
-    assert middleware.is_pjax(regular_request) is False
+def test_pjax_url_header():
+    response = view_pjax_block_auto(pjax_request)
+    assert response.has_header('X-PJAX-URL')
+    assert response['X-PJAX-URL'] == pjax_request.get_full_path()
+
+
+def test_pjax_redirect_header():
+    response = view_pjax_block_redirect(pjax_request)
+    assert response.has_header('X-PJAX-URL')
+    assert response['X-PJAX-URL'] == '/redirected/'
+
+
+def test_is_pjax():
+    assert djpjax.is_pjax(pjax_request) is True
+    assert djpjax.is_pjax(regular_request) is False
 
 
 def test_pjax_middleware_strips_get_param():
-    assert '_pjax' in pjax_request.GET
-    middleware.process_request(pjax_request)
-    assert '_pjax' not in pjax_request.GET
-
-
-def test_pjax_middleware_sets_url_header():
-    response = view_pjax_block_auto(pjax_request)
-    processed_response = middleware.process_response(pjax_request, response)
-    assert processed_response.has_header('X-PJAX-URL')
-    assert processed_response['X-PJAX-URL'] == '/'
-
-
-def test_pjax_middleware_redirect_header():
-    response = view_pjax_block_redirect(pjax_request)
-    processed_response = middleware.process_response(pjax_request, response)
-    assert processed_response.has_header('X-PJAX-URL')
-    assert processed_response['X-PJAX-URL'] == '/redirected/'
+    request = rf.get('/?_pjax=%23container',
+                     HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#container")
+    assert '_pjax' in request.GET
+    assert '_pjax' in request.META['QUERY_STRING']
+    middleware.process_request(request)
+    assert '_pjax' not in request.GET
+    assert '_pjax' not in request.META['QUERY_STRING']
 
 
 def test_pjax_middleware_strip_qs_parameter():
