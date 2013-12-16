@@ -16,10 +16,7 @@ class PJAXBlockNodeList(NodeList):
 
     def render(self, context):
         result = super(PJAXBlockNodeList, self).render(context)
-        try:
-            context.render_context["pjax_captured_blocks"][self.block_name] = result
-        except KeyError:
-            pass
+        context.render_context["pjax_captured_blocks"][self.block_name] = result
         return result
 
 
