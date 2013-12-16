@@ -122,7 +122,7 @@ def pjax_block(block=None, title_variable=None, title_block=None):
                 resp.title_variable = title_variable
                 resp.title_block = title_block
             return resp
-        return vary_on_headers('X-PJAX')(wrapped_view)
+        return vary_on_headers('X-PJAX-Container')(wrapped_view)
     return pjax_decorator
 
 
