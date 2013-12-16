@@ -85,17 +85,12 @@ class PJAXBlockTemplateResponse(TemplateResponse):
 _container_re = re.compile(r'^#\S+$')
 
 
-def _pjax_container_from_get(request):
-    return request.GET.get("_pjax", None)
-
-
 def _pjax_container_from_header(request):
     return request.META.get("HTTP_X_PJAX_CONTAINER", None)
 
 
 def _pjax_block_from_request(request):
-    container = (_pjax_container_from_header(request) or
-                 _pjax_container_from_get(request))
+    container = _pjax_container_from_header(request)
     if container:
         if _container_re.match(container):
             return container[1:]
@@ -121,8 +116,7 @@ def pjax_block(block=None, title_variable=None, title_block=None):
                 if not block_name:
                     raise ValueError(
                         "A PJAX block name must be supplied, either by the "
-                        "`block` argument, the X-PJAX-Container HTTP header "
-                        "or the _pjax GET parameter.")
+                        "`block` argument or the X-PJAX-Container HTTP header.")
                 resp.__class__ = PJAXBlockTemplateResponse
                 resp.block_name = block_name
                 resp.title_variable = title_variable
