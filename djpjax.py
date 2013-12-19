@@ -16,7 +16,10 @@ class PJAXBlockNodeList(NodeList):
 
     def render(self, context):
         result = super(PJAXBlockNodeList, self).render(context)
-        context.render_context["pjax_captured_blocks"][self.block_name] = result
+        if '_pjax_captured_blocks' in context.__dict__:
+            # If using the cached template loader, this method can be called
+            # even for non-PJAX requests, in which case capture nothing.
+            context._pjax_captured_blocks[self.block_name] = result
         return result
 
 
@@ -34,7 +37,7 @@ class PJAXBlockTemplateResponse(TemplateResponse):
         context = self.resolve_context(self.context_data)
 
         captured_blocks = dict()
-        context.render_context["pjax_captured_blocks"] = captured_blocks
+        context._pjax_captured_blocks = captured_blocks
 
         target_blocks = [n for n in (self.block_name, self.title_block) if n]
 
