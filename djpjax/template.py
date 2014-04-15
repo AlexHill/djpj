@@ -102,8 +102,8 @@ class PJAXBlockTemplateResponse(PJAXObject):
         captured_blocks = dict()
         context._pjax_captured_blocks = captured_blocks
 
-        target_blocks = {n for n in (self.block_name,
-                                     self.title_block_name) if n}
+        target_blocks = set(n for n in (self.block_name,
+                                        self.title_block_name) if n)
 
         node_queue = queue.Queue()
         for node in template.nodelist:
