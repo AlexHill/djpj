@@ -2,15 +2,13 @@ Django-PJAX-Blocks
 ==================
 
 Django-PJAX-Blocks is a Django helper for `defunkt's jquery-pjax`__. Use it
-to return the contents of individual template blocks to PJAX requests,
-with no need for separate PJAX-specific templates.
+to return the contents of individual template blocks to PJAX requests. You can
+optionally specify per-view or per-block templates for PJAX requests.
 
 __ https://github.com/defunkt/jquery-pjax
 
 
-Django-PJAX-Blocks is adapted from Jacob Kaplan-Moss' `Django-PJAX`__. Use
-Django-PJAX if you want to serve PJAX content from separate templates, or
-if you want your PJAX responses to inherit from their own base template.
+Django-PJAX-Blocks is adapted from Jacob Kaplan-Moss' `Django-PJAX`__.
 
 __ https://github.com/jacobian/django-pjax
 
