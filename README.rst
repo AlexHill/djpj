@@ -163,8 +163,6 @@ will be raised.
 Considerations
 ==============
 
-I haven't addressed caching yet; that's next on the list.
-
 Any performance benefits are strictly client-side using this package;
 performance on the server side will be strictly equal to or worse than simply
 rendering the full template at this stage, since the full template is actually
