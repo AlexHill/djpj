@@ -7,41 +7,40 @@ from djpjax.compat import string_types
 _container_re = re.compile(r'^#\S+$')
 
 
-def pjax_container_from_header(request):
-    return request.META.get("HTTP_X_PJAX_CONTAINER", None)
-
-
-def pjax_block_from_request(request):
-    container = pjax_container_from_header(request)
-    if container:
-        if _container_re.match(container):
-            return container[1:]
-        else:
-            raise ValueError("Invalid PJAX selector '%s' found in request: "
-                             "must be a simple ID selector of the form #<id>."
-                             % container)
+def pjax_container(request):
+    container = request.META['HTTP_X_PJAX_CONTAINER']
+    if _container_re.match(container):
+        return container[1:]
     else:
-        return None
+        raise ValueError("Invalid PJAX selector '%s' found in request: "
+                         "must be a simple ID selector of the form #<id>."
+                         % container)
 
 
-def pjaxify_template_name(name, block_name):
-    parts = name.rsplit('.', 1)
-    if len(parts) == 2:
-        name = "%s.pjax:%s.%s" % (parts[0], block_name, parts[1])
-    else:
-        name = "%s.pjax:%s" % (parts[0], block_name)
-    return name
+def pjaxify_template_path(template_path, container):
+    try:
+        parts = template_path.rsplit('.', 1)
+    except AttributeError:
+        raise ValueError("template_path must be a string type")
+    pjax_identifier = "=".join(filter(None, ("pjax", container)))
+    return ".".join(["%s-%s" % (parts[0], pjax_identifier)] + parts[1:])
 
 
-def pjaxify_template_var(transform_fn, template_var, block_name):
-    if isinstance(template_var, string_types):
+def transform_template_var(transform_fn, template_var, container=None):
+    if not isinstance(template_var, (list, tuple)):
         template_var = (template_var,)
-    if isinstance(template_var, (list, tuple)):
-        def template_pair(name):
-            return transform_fn(name, block_name), name
-        template_var = type(template_var)(t for name in template_var for t in
-                                          template_pair(name))
-    return template_var
+    template_pair = lambda name: (transform_fn(name, container), name)
+    return type(template_var)(t for name in template_var
+                              for t in template_pair(name))
+
+
+def pjaxify_template_var(request, template_var):
+    return transform_template_var(pjaxify_template_path, template_var)
+
+
+def pjaxify_template_var_with_container(request, template_var):
+    return transform_template_var(pjaxify_template_path, template_var,
+                                  container=pjax_container(request))
 
 
 def is_pjax(request):

@@ -1,11 +1,11 @@
 from django.template import TemplateSyntaxError
+
 # TODO: Find out why Django raises InvalidTemplateLibrary without this import.
 from django.template.loader import get_template
+
 from django.template.loader_tags import BlockNode, ExtendsNode
 
 from djpjax.compat import queue
-from djpjax.utils import pjaxify_template_var
-
 
 _wrapped_class_registry = {}
 
@@ -17,13 +17,13 @@ class PJAXObject(object):
 
     def __new__(cls, *args, **kwargs):
         raise NotImplementedError("%s cannot be instantiated directly. "
-                                  "Use the add_to() method instead." % cls)
+                                  "Use the cast() method instead." % cls)
 
     def __init__(self, *args, **kwargs):
         pass
 
     @classmethod
-    def add_to(cls, obj, *args, **kwargs):
+    def cast(cls, obj, *args, **kwargs):
         if not isinstance(obj, cls):
             try:
                 new_class = _wrapped_class_registry[obj.__class__]
@@ -76,14 +76,7 @@ class PJAXBlockTemplateResponse(PJAXObject):
     set to this class.
     """
 
-    def __init__(self, block_name, title_block_name, title_variable,
-                 template_name=None):
-        if callable(template_name):
-            self.template_name = pjaxify_template_var(
-                template_name, self.template_name, block_name)
-        elif template_name:
-            self.template_name = template_name
-
+    def __init__(self, block_name, title_block_name, title_variable):
         self.block_name = block_name
         self.title_block_name = title_block_name
         self.title_variable = title_variable
@@ -99,6 +92,14 @@ class PJAXBlockTemplateResponse(PJAXObject):
         template = self.resolve_template(self.template_name)
         context = self.resolve_context(self.context_data)
 
+        # If no block name is specified, assume we're rendering a PJAX-specific
+        # template and just return the rendered output.
+        if not self.block_name:
+            return template.render(context)
+
+        # Otherwise, proceed to capture the output from the pjax block and,
+        # if specified, the title block or variable.
+
         captured_blocks = dict()
         context._pjax_captured_blocks = captured_blocks
 
@@ -106,8 +107,7 @@ class PJAXBlockTemplateResponse(PJAXObject):
                                         self.title_block_name) if n)
 
         node_queue = queue.Queue()
-        for node in template.nodelist:
-            node_queue.put(node)
+        node_queue.put(template)
         while target_blocks:
             try:
                 node = node_queue.get(False)
@@ -115,19 +115,19 @@ class PJAXBlockTemplateResponse(PJAXObject):
                 break
             if hasattr(node, 'nodelist'):
                 if isinstance(node, BlockNode) and node.name in target_blocks:
-                    PJAXNodeList.add_to(node.nodelist, node.name)
+                    PJAXNodeList.cast(node.nodelist, node.name)
                     target_blocks.remove(node.name)
-                for node in node.nodelist:
-                    node_queue.put(node)
+                for child_node in node.nodelist:
+                    node_queue.put(child_node)
             if isinstance(node, ExtendsNode):
-                PJAXExtendsNode.add_to(node)
+                PJAXExtendsNode.cast(node)
                 for child_node in node.get_parent(context).nodelist:
                     node_queue.put(child_node)
         del node_queue
 
         # Render the template, but ignore its return value. We will return the
         # captured output from the target and optionally the title blocks.
-        _ = template.render(context)
+        template.render(context)
 
         try:
             target_block_content = captured_blocks[self.block_name]

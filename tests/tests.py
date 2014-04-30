@@ -1,5 +1,3 @@
-from functools import partial
-
 from django.conf import settings
 
 settings.configure()
@@ -10,7 +8,7 @@ from django.template import Template, TemplateSyntaxError
 from django.template.response import TemplateResponse
 from django.test.client import RequestFactory
 
-from djpjax.decorator import pjax_block
+from djpjax.decorator import pjax_block, pjax_template
 from djpjax.middleware import DjangoPJAXMiddleware
 from djpjax.utils import *
 from djpjax.template import PJAXBlockTemplateResponse
@@ -29,7 +27,7 @@ pjax_request = rf.get('/?_pjax=%23secondary',
 file_template = 'test_template.html'
 
 # A template to test the pjax_block decorator.
-est_template = Template(
+test_template = Template(
     "{% block title %}Block Title{% endblock %}"
     "Some text outside the main block."
     "{% with footwear='galoshes' %}"
@@ -48,23 +46,54 @@ middleware = DjangoPJAXMiddleware()
 
 def test_pjax_block_from_header():
     req = rf.get('/', HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#soviet_bloc")
-    assert pjax_block_from_request(req) == "soviet_bloc"
+    assert pjax_container(req) == "soviet_bloc"
 
 
 @raises(ValueError)
 def test_pjax_block_invalid_from_header():
     req = rf.get('/', HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#soviet .bloc")
-    _ = pjax_block_from_request(req)
+    _ = pjax_container(req)
+
+
+@raises(KeyError)
+def test_pjax_block_no_pjax_container():
+    request = rf.get('/', HTTP_X_PJAX=True)
+    _ = view_pjax_block_auto(request, None)
 
 
 @raises(ValueError)
-def test_pjax_block_not_supplied():
-    request = rf.get('/', HTTP_X_PJAX=True)
-    _ = view_pjax_block_auto(request, est_template)
+def test_pjax_block_none_arg():
+    pjax_block(None)
+
+
+@raises(ValueError)
+def test_pjax_template_none_arg():
+    pjax_template(None)
+
+
+@raises(ValueError)
+def test_pjax_template_no_result():
+    _ = pjax_template(lambda *a, **kw: None)(base_view)(pjax_request, test_template)
+
+
+def test_pjax_template_auto():
+    view = pjax_template()(base_view)
+    resp = view(pjax_request, 'test_template.html')
+    assert resp.template_name == ('test_template-pjax=secondary.html', 'test_template.html')
+
+
+def test_pjax_block_no_result():
+    resp = pjax_block(lambda *a, **kw: None)(base_view)(pjax_request, test_template)
+    result = resp.rendered_content
+    assert result == ("Block Title"
+                      "Some text outside the main block."
+                      "I'm wearing orange galoshes"
+                      "Some secondary content."
+                      "More text outside the main block.")
 
 
 def test_pjax_normal_request():
-    resp = view_pjax_block(regular_request, est_template)
+    resp = view_pjax_block(regular_request, test_template)
     result = resp.rendered_content
     assert result == ("Block Title"
                       "Some text outside the main block."
@@ -74,58 +103,62 @@ def test_pjax_normal_request():
 
 
 def test_pjax_block_auto():
-    resp = view_pjax_block_auto(pjax_request, est_template)
+    resp = view_pjax_block_auto(pjax_request, test_template)
     result = resp.rendered_content
     assert result == "Some secondary content."
 
 
 def test_pjax_block_auto_title():
-    resp = view_pjax_block_auto_title(pjax_request, est_template)
+    view = pjax_block(title_block="title")(base_view)
+    resp = view(pjax_request, test_template)
     result = resp.rendered_content
     assert result == ("<title>Block Title</title>\n"
                       "Some secondary content.")
 
 
 def test_pjax_block():
-    resp = view_pjax_block(pjax_request, est_template)
+    resp = view_pjax_block(pjax_request, test_template)
     result = resp.rendered_content
     assert result == "I'm wearing orange galoshes"
 
 @raises(TemplateSyntaxError)
 def test_pjax_block_error():
-    resp = view_pjax_block_error(pjax_request, est_template)
+    view = pjax_block("main_missing")(base_view)
+    resp = view(pjax_request, test_template)
     _ = resp.rendered_content
 
 
 def test_pjax_block_title_variable():
-    resp = view_pjax_block_title_variable(pjax_request, est_template,
-                                          {'title': 'Variable Title'})
+    view = pjax_block("main", title_variable="title")(base_view)
+    resp = view(pjax_request, test_template, {'title': 'Variable Title'})
     result = resp.rendered_content
     assert result == "<title>Variable Title</title>\nI'm wearing orange galoshes"
 
 
 @raises(KeyError)
 def test_pjax_block_title_variable_error():
-    resp = view_pjax_block_title_variable_error(pjax_request, est_template,
-                                                {'title': 'Variable Title'})
+    view = pjax_block("main", title_variable="title_missing")(base_view)
+    resp = view(pjax_request, test_template, {'title': 'Variable Title'})
     _ = resp.rendered_content
 
 
 def test_pjax_block_title_block():
-    resp = view_pjax_block_title_block(pjax_request, est_template)
+    view = pjax_block("main", title_block="title")(base_view)
+    resp = view(pjax_request, test_template)
     result = resp.rendered_content
     assert result == "<title>Block Title</title>\nI'm wearing orange galoshes"
 
 
 @raises(TemplateSyntaxError)
 def test_pjax_block_title_block_error():
-    resp = view_pjax_block_title_block_error(pjax_request, est_template)
+    view = pjax_block("main", title_block="title_missing")(base_view)
+    resp = view(pjax_request, test_template)
     _ = resp.rendered_content
 
 
-@raises(TypeError)
+@raises(ValueError)
 def test_pjax_block_title_conflict():
-    pjax_block("main", title_var="title", title_block="title")(None)
+    pjax_block("main", title_variable="title", title_block="title")(None)
 
 
 def test_pjax_block_in_base_template():
@@ -141,7 +174,7 @@ def test_pjax_block_in_base_file_template():
 
 
 def test_pjax_url_header():
-    response = view_pjax_block_auto(pjax_request, est_template)
+    response = view_pjax_block_auto(pjax_request, test_template)
     assert response.has_header('X-PJAX-URL')
     assert response['X-PJAX-URL'] == pjax_request.get_full_path()
 
@@ -190,24 +223,36 @@ def test_exception_on_non_deferred_response():
     _ = view_pjax_block_not_deferred(pjax_request)
 
 
-def test_pjaxify_template_name():
-    assert pjaxify_template_name("test.html", "testblock") == "test.pjax:testblock.html"
-    assert pjaxify_template_name("test", "testblock") == "test.pjax:testblock"
+@raises(ValueError)
+def test_pjaxify_instance_error():
+    pjaxify_template_path(test_template, None)
 
 
 def test_pjaxify_template_var():
-    pjaxify = partial(pjaxify_template_var,
-                      pjaxify_template_name)
-    assert pjaxify("test.html", "testblock") == ("test.pjax:testblock.html", "test.html")
-    pjaxed_seq = ["test1.pjax:testblock.html", "test1.html",
-                  "test2.pjax:testblock.html", "test2.html",]
-    assert pjaxify(["test1.html", "test2.html"], "testblock") == pjaxed_seq
+    pjaxify = pjaxify_template_var
+    template_seq = ("test1.html", "test2")
+    pjaxed_seq = ("test1-pjax.html", "test1.html",
+                  "test2-pjax", "test2")
+    assert pjaxify(pjax_request, template_seq[0]) == pjaxed_seq[:2]
+    assert pjaxify(pjax_request, template_seq) == pjaxed_seq
+
+
+def test_pjaxify_template_var_request():
+
+    pjaxify = pjaxify_template_var_with_container
+    assert pjaxify(pjax_request, "test.html") == ("test-pjax=secondary.html",
+                                                  "test.html")
+    template_seq = ("test1.html", "test2")
+    pjaxed_seq = ("test1-pjax=secondary.html", "test1.html",
+                  "test2-pjax=secondary", "test2")
+    assert pjaxify(pjax_request, template_seq) == pjaxed_seq
 
 
 def test_pjax_static_template():
-    resp = view_pjax_block_static_template(pjax_request, est_template)
+    view = pjax_template('static_template.html')(base_view)
+    resp = view(pjax_request, test_template)
     print(resp.template_name)
-    assert resp.template_name == ("static_template.html",)
+    assert resp.template_name == "static_template.html"
 
 
 def test_registry():
@@ -218,7 +263,7 @@ def test_registry():
 
 @raises(NotImplementedError)
 def test_object_wrapping_direct_instantiation():
-    response = base_view(pjax_request, est_template)
+    response = base_view(pjax_request, test_template)
     PJAXBlockTemplateResponse(response)
 
 
@@ -231,14 +276,6 @@ def base_view(request, template, extra_context=None):
 
 view_pjax_block = pjax_block("main")(base_view)
 view_pjax_block_auto = pjax_block()(base_view)
-view_pjax_block_auto_title = pjax_block(title_block="title")(base_view)
-view_pjax_block_error = pjax_block("main_missing")(base_view)
-view_pjax_block_title_block = pjax_block("main", title_block="title")(base_view)
-view_pjax_block_title_block_error = pjax_block("main", title_block="title_missing")(base_view)
-view_pjax_block_title_variable = pjax_block("main", title_var="title")(base_view)
-view_pjax_block_title_variable_error = pjax_block("main", title_var="title_missing")(base_view)
-view_pjax_block_static_template = pjax_block("main", template=('static_template.html',))(base_view)
-
 
 @pjax_block()
 def view_pjax_block_redirect(_):

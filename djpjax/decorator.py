@@ -1,46 +1,72 @@
 import functools
+import inspect
 from django.http import HttpResponseRedirect
 from djpjax.template import PJAXBlockTemplateResponse
 from djpjax.utils import (strip_pjax_parameter, is_pjax,
-                          pjax_block_from_request, pjaxify_template_name)
+                          pjax_container,
+                          pjaxify_template_var_with_container)
 
 
-def pjax_block(block=None, title_var=None, title_block=None, template=None):
+def pjax_template(template=pjaxify_template_var_with_container):
+
+    if not template:
+        raise ValueError("The template argument to pjax_template "
+                         "may not be None.")
+
+    def process_response(request, response):
+        _template = (template(request, response.template_name)
+                     if callable(template) else template)
+        if not _template:
+            raise ValueError("Tried to set PJAX response's template to %s. "
+                             "You must provide a template!" % _template)
+        response.template_name = _template
+
+    return _make_pjax_decorator(process_response)
+
+
+def pjax_block(block=pjax_container,
+               title_variable=None, title_block=None):
+
+    if not block:
+        raise ValueError("The block argument to pjax_block may not be None.")
+
+    if title_variable and title_block:
+        raise ValueError("Only one of 'title_variable' and 'title_block' "
+                         "may be passed to pjax decorator.")
+
+    def process_response(request, response):
+        _block = block(request) if callable(block) else block
+        PJAXBlockTemplateResponse.cast(response, _block,
+                                       title_block, title_variable)
+
+    return _make_pjax_decorator(process_response)
+
+
+def _make_pjax_decorator(process_fn):
 
     # Import this here to avoid import issues when running tests.
     from django.views.decorators.vary import vary_on_headers
 
-    if title_var and title_block:
-        raise TypeError("Only one of 'title_variable' and 'title_block' "
-                        "may be passed to pjax decorator.")
-
     def pjax_decorator(view):
         @functools.wraps(view)
         def wrapped_view(request, *args, **kwargs):
-            strip_pjax_parameter(request)
             response = view(request, *args, **kwargs)
             if is_pjax(request):
+                # Before generating a response, strip the "_pjax" GET parameter
+                # that jquery-pjax adds as a browser cache-busting measure.
+                strip_pjax_parameter(request)
+
+                # This header helps jquery-pjax correctly handle redirects.
                 response['X-PJAX-URL'] = (response.get('Location')
                                           or request.get_full_path())
                 # Test if response supports deferred rendering, approach copied
                 # from django.core.handlers.base.BaseHandler.get_response()
                 if hasattr(response, 'render') and callable(response.render):
-                    _block = block or pjax_block_from_request
-                    block_name = _block(request) if callable(_block) else _block
-                    template_arg = template or pjaxify_template_name
-                    if not block_name:
-                        raise ValueError(
-                            "A PJAX block name must be supplied, "
-                            "either by the  `block` argument "
-                            "or the X-PJAX-Container HTTP header.")
-                    PJAXBlockTemplateResponse.add_to(response,
-                                                     block_name,
-                                                     title_block,
-                                                     title_var,
-                                                     template_arg)
+                    process_fn(request, response)
                 elif not isinstance(response, HttpResponseRedirect):
-                    raise TypeError("PJAX views must return either redirects, "
-                                    "or responses with a render() method.")
+                    raise TypeError("PJAX views must return either a response "
+                                    "with a render() method, or a redirect.")
             return response
         return vary_on_headers('X-PJAX-Container')(wrapped_view)
+
     return pjax_decorator
