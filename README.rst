@@ -16,7 +16,7 @@ Django-PJAX-Blocks was originally adapted from Jacob Kaplan-Moss' `Django-PJAX`_
 
 __ https://github.com/jacobian/django-pjax
 
-This package supports Python
+This package is tested in Django 1.4+ and Python 2.6, 2.7, 3.3+ and PyPy.
 
 
 What's PJAX?
