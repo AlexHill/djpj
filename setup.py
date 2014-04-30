@@ -1,6 +1,6 @@
 import os
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
 except ImportError:
     from distutils.core import setup
 
@@ -18,8 +18,8 @@ setup(
     author = 'Alex Hill',
     author_email = 'alex@hill.net.au',
 
-    py_modules =  ['djpjax'],
-    install_requires = ['django>=1.3'],
+    packages = find_packages(),
+    install_requires = ['django>=1.4'],
 
     classifiers = (
         'Development Status :: 4 - Beta',
