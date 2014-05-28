@@ -6,9 +6,10 @@ import djpjax
 class DjangoPJAXMiddleware(object):
 
     def __init__(self):
+        djpjax_setting = getattr(settings, 'DJPJAX_DECORATE_URLS', [])
         self.decorated_urls = tuple(
             (url_prefix, getattr(djpjax, decorator)(**kwargs))
-            for url_prefix, (decorator, kwargs) in reversed(settings.DJPJ_DECORATE_URLS))
+            for url_prefix, (decorator, kwargs) in reversed(djpjax_setting))
 
     def process_request(self, request):
         strip_pjax_parameter(request)
