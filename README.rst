@@ -311,6 +311,37 @@ the container name::
         return TemplateResponse(request, "template.html", context)
 
 
+Using django-pjax-blocks with third-party views
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If you're using a Django app which defines its own views, you can't easily
+decorate them as you would views you write yourself.
+
+In these cases, you can apply django-pjax-blocks' decorators to URLs matching
+particular regular expressions, via the included middleware.
+
+To enable the middleware, add this line to the end of ``MIDDLEWARE_CLASSES``
+in your settings.py::
+
+    "djpjax.middleware.DjangoPJAXMiddleware",
+
+Configure the middleware using the the ``DJPJAX_DECORATED_URLS`` setting. This
+should be a sequence of pairs, with the first element of each pair a regular
+expression matching the URLs you want decorated, and the second a tuple
+describing the decorator you want to use and the arguments to pass to it.
+
+For example, the following configuration will return the contents of the block
+"product_info", with the value of the context variable "product_name" as the
+title.
+
+    DJPJAX_DECORATED_URLS = (
+        ('^/shop/product/, ('pjax_block', {'block': 'product_info',
+                                           'title_variable': 'product_name'})),
+    )
+
+That configuration is equivalent to decorating a view mounted at /shop/product/
+with ``@pjax_block("product_info", title_variable="product_name)``.
+
+
 Considerations
 ==============
 
