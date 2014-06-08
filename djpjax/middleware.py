@@ -8,7 +8,7 @@ import djpjax
 class DjangoPJAXMiddleware(object):
 
     def __init__(self):
-        djpjax_setting = getattr(settings, 'DJPJAX_DECORATE_URLS', [])
+        djpjax_setting = getattr(settings, 'DJPJAX_DECORATED_URLS', [])
         self.decorated_urls = tuple(
             (re.compile(url_regex), getattr(djpjax, decorator)(**kwargs))
             for url_regex, (decorator, kwargs) in reversed(djpjax_setting))
