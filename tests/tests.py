@@ -121,6 +121,7 @@ def test_pjax_block():
     result = resp.rendered_content
     assert result == "I'm wearing orange galoshes"
 
+
 @raises(TemplateSyntaxError)
 def test_pjax_block_error():
     view = pjax_block("main_missing")(base_view)
@@ -264,7 +265,7 @@ def test_registry():
 @raises(NotImplementedError)
 def test_object_wrapping_direct_instantiation():
     response = base_view(pjax_request, test_template)
-    PJAXBlockTemplateResponse(response)
+    PJAXBlockTemplateResponse(response, None, None)
 
 
 # The test "views" themselves.
@@ -276,6 +277,7 @@ def base_view(request, template, extra_context=None):
 
 view_pjax_block = pjax_block("main")(base_view)
 view_pjax_block_auto = pjax_block()(base_view)
+
 
 @pjax_block()
 def view_pjax_block_redirect(_):
