@@ -327,11 +327,12 @@ in your settings.py::
 Configure the middleware using the the ``DJPJAX_DECORATED_URLS`` setting. This
 should be a sequence of pairs, with the first element of each pair a regular
 expression matching the URLs you want decorated, and the second a tuple
-describing the decorator you want to use and the arguments to pass to it.
+containing the name of the decorator you want to use and a dict of keyword
+arguments to construct it with.
 
 For example, the following configuration will return the contents of the block
 "product_info", with the value of the context variable "product_name" as the
-title.
+title::
 
     DJPJAX_DECORATED_URLS = (
         ('^/shop/product/, ('pjax_block', {'block': 'product_info',
