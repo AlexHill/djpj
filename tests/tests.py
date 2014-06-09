@@ -39,8 +39,6 @@ test_template = Template(
 base_template = Template("{% block main %}base block content{% endblock %}")
 extends_template = Template("{% extends base_template %}")
 
-middleware = DjangoPJAXMiddleware()
-
 
 # Tests.
 
@@ -206,9 +204,36 @@ def test_pjax_middleware():
                      HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#container")
     assert '_pjax' in request.GET
     assert '_pjax' in request.META['QUERY_STRING']
-    middleware.process_request(request)
+    DjangoPJAXMiddleware().process_request(request)
     assert '_pjax' not in request.GET
     assert '_pjax' not in request.META['QUERY_STRING']
+
+
+def test_middleware_configuration():
+
+    configuration = (
+        ('^/prefix/one', ('pjax_template', {})),
+        ('^/prefix/two', ('pjax_block', {'block': 'secondary',
+                                         'title_block': 'title'})))
+
+    middleware = DjangoPJAXMiddleware(configuration)
+
+    assert ((re.compile('^/prefix/two'), re.compile('^/prefix/one'))
+            == tuple(url_re for url_re, _ in middleware.decorated_urls))
+
+    request_one = rf.get('/prefix/one?_pjax=%23secondary',
+                         HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#secondary")
+    response_one = base_view(request_one, 'test_template.html')
+    pjax_one = middleware.process_template_response(request_one, response_one)
+    assert pjax_one.template_name == ('test_template-pjax=secondary.html',
+                                      'test_template.html')
+
+    request_two = rf.get('/prefix/two?_pjax=%23secondary',
+                         HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#secondary")
+    response_two = base_view(request_two, test_template)
+    pjax_two = middleware.process_template_response(request_two, response_two)
+    assert pjax_two.rendered_content == ('<title>Block Title</title>\n'
+                                         'Some secondary content.')
 
 
 def test_strip_pjax_qs_parameter():
