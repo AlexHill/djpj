@@ -1,8 +1,6 @@
 from contextlib import contextmanager
 import re
 
-from djpjax.compat import string_types
-
 
 _container_re = re.compile(r'^#\S+$')
 

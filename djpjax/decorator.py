@@ -1,5 +1,4 @@
 import functools
-import inspect
 from django.http import HttpResponseRedirect
 from djpjax.template import PJAXBlockTemplateResponse
 from djpjax.utils import (strip_pjax_parameter, is_pjax,
