@@ -1,34 +1,65 @@
-Django-PJAX-Blocks
-==================
+Overview of Django-PJAX-Blocks
+==============================
 
-Django-PJAX-Blocks is a flexible Django helper for `defunkt's jquery-pjax`__.
-PJAX is a way to update a fragment of a web page with fresh data from the
-server, without performing a full page refresh. Django-PJAX-Blocks lets you
-respond to each PJAX request with the contents of a specific block in your
-normal template, or with an entirely separate template.
+Django-PJAX-Blocks is a flexible Django helper for PJAX. PJAX is a technique
+you can employ as a web developer to deliver a faster browsing experience
+to users of your website.
+
+With Django-PJAX-Blocks, your Django website can respond to each PJAX request
+with the contents of the template block of your choice. You can also render
+PJAX-specific templates. You can do all this entirely in configuration,
+*without altering any of your views or templates*.
+
+PJAX is a well-established technique. If you're reading this on GitHub, you
+probably loaded this content via PJAX.
+
+
+How does PJAX work?
+-------------------
+
+Normally, when you click a link, your browser has to set up everything from
+scratch: HTML has to be parsed, scripts have to be compiled and executed,
+stylesheets interpreted and applied. It's a lot of work, and when you're
+browsing between different pages on the same website, much of this work is
+duplicated. It's like heating up a new skillet for every pancake.
+
+When a user clicks a link on your PJAX-enabled website, the server sends only
+the content that needs to change to display the new page. The fresh dollop of
+content drops into place in your page, and the browser doesn't have to do all
+the work associated with a full page load. To complete the trick, we manipulate
+the browser history to make the back and forward buttons work normally.
+
+
+How does Django-PJAX-Blocks help me?
+------------------------------------
+
+PJAX needs the server to send the chunk of content that corresponds to the link
+the user clicked. Django-PJAX-Blocks is the simplest way to get your Django
+site speaking PJAX, without altering any of your views or templates.
+
+Most of our Django templates are already split into template blocks demarcating
+logic sections of our pages. Django-PJAX-Blocks lets your site respond to PJAX
+requests with the content of a single template block. You can select which block
+to render at the URL, view or request level, giving you complete flexibility and
+total control over the PJAX behaviour of your site.
+
+
+Acknowledgements
+----------------
+
+Django-PJAX-Blocks includes a copy of defunkt's `jquery-pjax`__ – the canonical
+client-side PJAX library and the same one used by GitHub.
 
 __ https://github.com/defunkt/jquery-pjax
-
-Django-PJAX-Blocks can return different blocks or templates from a single view,
-depending on the target container of each PJAX request. Read more on this below.
 
 Django-PJAX-Blocks was originally adapted from Jacob Kaplan-Moss' `Django-PJAX`__.
 
 __ https://github.com/jacobian/django-pjax
 
+Python and Django compatibility
+-------------------------------
+
 This package is tested in Django 1.4+ and Python 2.6, 2.7, 3.3+ and PyPy.
-
-
-What's PJAX?
-------------
-
-PJAX is a method of replacing a chunk of content in a web page without requiring
-a complete page reload. It uses AJAX and pushState to deliver a faster browsing
-experience with real permalinks, page titles, and a working back button.
-
-A demo makes more sense, so `check out the one defunkt put together`__
-
-__ http://pjax.heroku.com/
 
 
 Usage
