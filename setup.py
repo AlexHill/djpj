@@ -9,7 +9,7 @@ def read(fname):
 
 setup(
     name = 'django-pjax-blocks',
-    version = '0.2',
+    version = '0.3',
     description = 'A template-block-based Django helper for jQuery-PJAX.',
     license = 'BSD',
     long_description = read('README.rst'),
@@ -28,11 +28,11 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 2.5',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: Implementation :: PyPy',
         'Programming Language :: Python',
     ),
 )
