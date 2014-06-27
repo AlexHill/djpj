@@ -4,24 +4,25 @@ try:
 except ImportError:
     from distutils.core import setup
 
+
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name = 'django-pjax-blocks',
-    version = '0.3',
-    description = 'A template-block-based Django helper for jQuery-PJAX.',
-    license = 'BSD',
-    long_description = read('README.rst'),
-    url = 'https://github.com/alexhill/django-pjax-blocks',
+    name='django-pjax-blocks',
+    version='0.3',
+    description='A template-block-based Django helper for jQuery-PJAX.',
+    license='BSD',
+    long_description=read('README.rst'),
+    url='https://github.com/alexhill/django-pjax-blocks',
 
-    author = 'Alex Hill',
-    author_email = 'alex@hill.net.au',
+    author='Alex Hill',
+    author_email='alex@hill.net.au',
 
-    packages = find_packages(),
-    install_requires = ['django>=1.4'],
+    packages=find_packages(),
+    install_requires=['django>=1.4'],
 
-    classifiers = (
+    classifiers=(
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Framework :: Django',
