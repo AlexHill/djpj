@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 settings.configure()
 settings.TEMPLATE_DIRS = ('tests/', '.')
@@ -15,7 +16,7 @@ from djpjax.template import PJAXBlockTemplateResponse
 
 import djpjax.template
 
-from nose.tools import raises
+from nose.tools import raises, assert_raises
 
 # A couple of request objects - one PJAX, one not.
 rf = RequestFactory()
@@ -212,9 +213,10 @@ def test_pjax_middleware():
 def test_middleware_configuration():
 
     configuration = (
-        ('^/prefix/one', ('pjax_template', {})),
-        ('^/prefix/two', ('pjax_block', {'block': 'secondary',
-                                         'title_block': 'title'})))
+        ('^/prefix/one', ('@pjax_template()',
+                          '@pjax_block()')),
+        ('^/prefix/two', '@pjax_block(block="secondary", title_block="title")'),
+    )
 
     middleware = DjangoPJAXMiddleware(configuration)
 
@@ -234,6 +236,24 @@ def test_middleware_configuration():
     pjax_two = middleware.process_template_response(request_two, response_two)
     assert pjax_two.rendered_content == ('<title>Block Title</title>\n'
                                          'Some secondary content.')
+
+
+def test_middleware_invalid_decorator():
+
+    decorator_mistakes = (
+        'pjax_block()',  # Missing @
+        '@pjax_block',  # Not a function call
+        '@pjax_blerk()',  # Not a known function
+        '@pjax_block(*["main"])',  # Using star args
+        '@pjax_block(**{block: "main"})',  # Using kwargs
+        '@pjax_block("main_"[:-1])',  # Not a string
+        '@pjax_block(block="main_"[:-1])'  # Not a string
+    )
+
+    for decorator in decorator_mistakes:
+        assert_raises(ImproperlyConfigured,
+                      DjangoPJAXMiddleware.parse_decorator,
+                      decorator)
 
 
 def test_strip_pjax_qs_parameter():
