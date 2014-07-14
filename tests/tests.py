@@ -9,12 +9,12 @@ from django.template import Template, TemplateSyntaxError
 from django.template.response import TemplateResponse
 from django.test.client import RequestFactory
 
-from djpjax.decorator import pjax_block, pjax_template
-from djpjax.middleware import DjangoPJAXMiddleware
-from djpjax.utils import *
-from djpjax.template import PJAXBlockTemplateResponse
+from djpj.decorator import pjax_block, pjax_template
+from djpj.middleware import DjangoPJAXMiddleware
+from djpj.utils import *
+from djpj.template import PJAXBlockTemplateResponse
 
-import djpjax.template
+import djpj.template
 
 from nose.tools import raises, assert_raises
 
@@ -303,7 +303,7 @@ def test_pjax_static_template():
 
 def test_registry():
     wrapped_classes = sorted([cls.__name__ for cls
-                              in djpjax.template._wrapped_class_registry])
+                              in djpj.template._wrapped_class_registry])
     assert wrapped_classes == ['ExtendsNode', 'NodeList', 'TemplateResponse']
 
 

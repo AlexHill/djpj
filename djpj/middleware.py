@@ -1,29 +1,20 @@
 import ast
-from collections import deque
 import re
+
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-from djpjax import pjax_block, pjax_template
-from djpjax.utils import strip_pjax_parameter
-from django.conf import settings
-
-
-def _depth_limited_ast_bfs(node, limit):
-    todo = deque([(node, 1)])
-    while todo:
-        node, depth = todo.popleft()
-        if depth < limit:
-            todo.extend((child, depth+1)
-                        for child in ast.iter_child_nodes(node))
-        yield node
+from djpj.decorator import pjax_block, pjax_template
+from djpj.utils import strip_pjax_parameter
 
 
 class DjangoPJAXMiddleware(object):
 
     def __init__(self, config=None):
-        djpjax_setting = (config or
-                          getattr(settings, 'DJPJAX_DECORATED_URLS', None))
-        self.decorated_urls = self.parse_configuration(djpjax_setting or [])
+        djpj_setting = (config or
+                        getattr(settings, 'DJPJ_PJAX_URLS', None))
+        self.decorated_urls = self.parse_configuration(djpj_setting or [])
+        print(self.decorated_urls)
 
     @staticmethod
     def parse_decorator(decorator_string):

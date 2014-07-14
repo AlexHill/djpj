@@ -5,14 +5,18 @@ from django.template.loader import get_template
 
 from django.template.loader_tags import BlockNode, ExtendsNode
 
-from djpjax.compat import queue
+from djpj.compat import queue
 
 _wrapped_class_registry = {}
 
 
 class PJAXObject(object):
     """
-    Base object used for wrapping various Django template structures. The
+    Base class used for wrapping various Django template structures. This
+    works by dynamically changing the type of various objects, so beware!
+
+    Use by defining a subclass of PJAXObject which overrides a method in the
+    class you want to wrap, then passing an object to cast().
     """
 
     def __new__(cls, *args, **kwargs):
@@ -20,6 +24,10 @@ class PJAXObject(object):
                                   "Use the cast() method instead." % cls)
 
     def __init__(self, *args, **kwargs):
+        """
+        If you override __init__, it will be called when you call cast(). This
+        is safe; the wrapped class' __init__ won't be called again.
+        """
         pass
 
     @classmethod
@@ -46,6 +54,7 @@ class PJAXNodeList(PJAXObject):
     """
 
     def __init__(self, block_name):
+        super(PJAXNodeList, self).__init__()
         self.block_name = block_name
 
     def render(self, context):
