@@ -1,7 +1,7 @@
 import functools
 
 from django.http import HttpResponseRedirect, HttpRequest
-from djpj.template import PJAXBlockTemplateResponse
+from djpj.template import PJAXTemplateResponse
 from djpj.utils import (strip_pjax_parameter, is_pjax,
                         pjax_container, pjaxify_template_var_with_container)
 
@@ -68,7 +68,7 @@ def pjax_block(block=pjax_container,
 
     def process_response(request, response):
         _block = block(request) if callable(block) else block
-        PJAXBlockTemplateResponse.cast(response, _block,
-                                       title_block, title_variable)
+        PJAXTemplateResponse.cast(response, _block,
+                                  title_block, title_variable)
 
     return _make_pjax_decorator(process_response)

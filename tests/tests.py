@@ -12,7 +12,7 @@ from django.test.client import RequestFactory
 from djpj.decorator import pjax_block, pjax_template
 from djpj.middleware import DjangoPJAXMiddleware
 from djpj.utils import *
-from djpj.template import PJAXBlockTemplateResponse
+from djpj.template import PJAXTemplateResponse
 
 import djpj.template
 
@@ -92,6 +92,9 @@ def test_pjax_block_no_result():
 
 
 def test_pjax_normal_request():
+
+    djpj.template.DjPjTemplate.cast(test_template)
+
     resp = view_pjax_block(regular_request, test_template)
     result = resp.rendered_content
     assert result == ("Block Title"
@@ -304,13 +307,13 @@ def test_pjax_static_template():
 def test_registry():
     wrapped_classes = sorted([cls.__name__ for cls
                               in djpj.template._wrapped_class_registry])
-    assert wrapped_classes == ['ExtendsNode', 'NodeList', 'TemplateResponse']
+    assert wrapped_classes == ['ExtendsNode', 'NodeList', 'Template', 'TemplateResponse']
 
 
 @raises(NotImplementedError)
 def test_object_wrapping_direct_instantiation():
     response = base_view(pjax_request, test_template)
-    PJAXBlockTemplateResponse(response, None, None)
+    PJAXTemplateResponse(response, None, None)
 
 
 # The test "views" themselves.

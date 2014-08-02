@@ -11,10 +11,8 @@ from djpj.utils import strip_pjax_parameter
 class DjangoPJAXMiddleware(object):
 
     def __init__(self, config=None):
-        djpj_setting = (config or
-                        getattr(settings, 'DJPJ_PJAX_URLS', None))
+        djpj_setting = (config or getattr(settings, 'DJPJ_PJAX_URLS', None))
         self.decorated_urls = self.parse_configuration(djpj_setting or [])
-        print(self.decorated_urls)
 
     @staticmethod
     def parse_decorator(decorator_string):
