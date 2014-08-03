@@ -101,7 +101,7 @@ class DjPjTemplate(DjPjObject, Template):
         Walk the template tree and convert all necessary objects into their
         DjPj equivalents. This includes ExtendsNodes and BlockNodes' NodeLists
         (but not BlockNodes themselves as they're not actually rendered from
-        the template tree – see the source for BlockNode.render().
+        the template tree - see the source for BlockNode.render().
         """
         node_queue = queue.Queue()
         node_queue.put(self)
