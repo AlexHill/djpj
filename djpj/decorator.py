@@ -68,7 +68,7 @@ def pjax_block(block=pjax_container,
 
     def process_response(request, response):
         _block = block(request) if callable(block) else block
-        PJAXTemplateResponse.cast(response, _block,
+        PJAXTemplateResponse.patch(response, _block,
                                   title_block, title_variable)
 
     return _make_pjax_decorator(process_response)

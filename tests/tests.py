@@ -93,7 +93,7 @@ def test_pjax_block_no_result():
 
 def test_pjax_normal_request():
 
-    djpj.template.DjPjTemplate.cast(test_template)
+    djpj.template.DjPjTemplate.patch(test_template)
 
     resp = view_pjax_block(regular_request, test_template)
     result = resp.rendered_content

@@ -22,35 +22,58 @@ class StopRendering(Exception):
 
 class DjPjObject(object):
     """
-    Base class used for wrapping various Django template structures. This
-    works by dynamically changing the type of various objects, so beware!
+    This is a base class used for wrapping various Django template structures.
+    This works by dynamically changing the type of various objects, so beware!
 
-    Use by defining a subclass of DjPjObject which overrides a method in the
-    class you want to wrap, then passing an object to cast().
+    The purpose of DjPjObject is essentially to monkey-patch arbitrary objects
+    in a very visible way, making use of Python's class system instead of
+    overriding instance methods for transparent debugging and IDE-friendliness.
+
+    To use, define your patched methods on a subclass of DjPjObject, then
+    pass the object you want to patch to patch(). The object's type will be
+    swapped to one that includes your patch class in its class hierarchy, and
+    Python's method resolution machinery will call the patched methods instead
+    of their original counterparts. You can use self and super in your methods
+    as if you were subclassing normally.
+
+    Optionally, you can include additional base classes. In that case, you'll
+    see an error if you try to patch an object that is not an instance of
+    every extra base class.
     """
 
     def __new__(cls, *args, **kwargs):
         raise NotImplementedError("%s cannot be instantiated directly. "
-                                  "Use the cast() method instead." % cls)
+                                  "Use the patch() method instead." % cls)
 
-    def __init__(self, *args, **kwargs):
+    def __patch__(self, *args, **kwargs):
         """
-        If you override __init__, it will be called when you call cast(). This
-        is safe; the wrapped class' __init__ won't be called again.
+        This is kind of like __init__, but run after an object is patched,
+        rather than after it's created. Override it to provide patch-time
+        behaviour.
         """
         pass
 
     @classmethod
-    def cast(cls, obj, *args, **kwargs):
+    def patch(cls, obj, *args, **kwargs):
+        """
+        Create (or fetch from cache) a new class that inherits from both cls
+        and the passed object's class.
+        """
         if not isinstance(obj, cls):
+            for base_class in cls.__bases__[1:]:
+                if not isinstance(obj, base_class):
+                    raise RuntimeError(
+                        "Object to be patched by %s is not an instance of %s"
+                        % (cls.__name__, base_class.__name__))
+            obj_class = type(obj)
             try:
-                new_class = _wrapped_class_registry[obj.__class__]
+                new_class = _wrapped_class_registry[obj_class]
             except KeyError:
-                new_class = type("DjPj" + obj.__class__.__name__,
-                                 (cls, obj.__class__), {})
-                _wrapped_class_registry[obj.__class__] = new_class
+                new_class = type("DjPj" + obj_class.__name__,
+                                 (cls, obj_class), {})
+                _wrapped_class_registry[obj_class] = new_class
             obj.__class__ = new_class
-            obj.__init__(*args, **kwargs)
+            obj.__patch__(*args, **kwargs)
         return obj
 
 
@@ -63,7 +86,7 @@ class DjPjNodeList(DjPjObject, NodeList):
     bypassing any overridden behaviour in our subclass.
     """
 
-    def __init__(self, block_name):
+    def __patch__(self, block_name):
         self._djpj_block_name = block_name
 
     def render(self, context):
@@ -80,19 +103,19 @@ class DjPjNodeList(DjPjObject, NodeList):
 
 class DjPjExtendsNode(DjPjObject, ExtendsNode):
     def get_parent(self, *args, **kwargs):
-        compiled_parent = super(DjPjExtendsNode, self).get_parent(*args, **kwargs)
-        DjPjTemplate.cast(compiled_parent)
-        return compiled_parent
+        parent = super(DjPjExtendsNode, self).get_parent(*args, **kwargs)
+        DjPjTemplate.patch(parent)
+        return parent
 
 
 class DjPjTemplate(DjPjObject, Template):
     """
-    Use this by casting your template with DjPjTemplate.cast(template), and
+    Use this by casting your template with DjPjTemplate.patch(template), and
     then calling template.render_blocks(context, blocks), where blocks is a
     sequence of block names you wish to render.
     """
 
-    def __init__(self):
+    def __patch__(self):
         self._djpj_initialised_blocks = set()
         self._initialise_blocks()
 
@@ -112,12 +135,12 @@ class DjPjTemplate(DjPjObject, Template):
                 break
             if hasattr(node, 'nodelist'):
                 if isinstance(node, BlockNode):
-                    DjPjNodeList.cast(node.nodelist, node.name)
+                    DjPjNodeList.patch(node.nodelist, node.name)
                     self._djpj_initialised_blocks.add(node.name)
                 for child_node in node.nodelist:
                     node_queue.put(child_node)
             if isinstance(node, ExtendsNode):
-                DjPjExtendsNode.cast(node)
+                DjPjExtendsNode.patch(node)
         del node_queue
 
     def render_blocks(self, context, blocks):
@@ -135,11 +158,14 @@ class DjPjTemplate(DjPjObject, Template):
 
 class PJAXTemplateResponse(DjPjObject, SimpleTemplateResponse):
     """
-    When a view decorated with pjax_block is called, its TemplateResponses are
-    set to this class.
+    This is used by the PJAX decorator. Before a response is returned, this
+    class is inserted into its type hierarchy, so that we can intercept calls
+    to rendered_content() and instead
+    it's inserted into its type hierarchy, so that when rendered_content is
+    accessed, we
     """
 
-    def __init__(self, block_name, title_block_name, title_variable):
+    def __patch__(self, block_name, title_block_name, title_variable):
         self._djpj_block_name = block_name
         self._djpj_title_block_name = title_block_name
         self._djpj_title_variable = title_variable
@@ -152,13 +178,15 @@ class PJAXTemplateResponse(DjPjObject, SimpleTemplateResponse):
         Then render the template as usual, but instead of returning the result,
         return the captured output from our target block(s).
         """
-        template = self.resolve_template(self.template_name)
-        context = self.resolve_context(self.context_data)
 
         # just for convenience
         block = self._djpj_block_name
         title_block = self._djpj_title_block_name
         title_var = self._djpj_title_variable
+
+        # Get a Template and Context object
+        template = self.resolve_template(self.template_name)
+        context = self.resolve_context(self.context_data)
 
         # If no block name is specified, assume we're rendering a PJAX-specific
         # template and just return the rendered output.
@@ -167,8 +195,8 @@ class PJAXTemplateResponse(DjPjObject, SimpleTemplateResponse):
 
         # Otherwise, proceed to capture the output from the pjax block and,
         # if specified, the title block or variable.
+        DjPjTemplate.patch(template)
         target_blocks = filter(None, (block, title_block))
-        DjPjTemplate.cast(template)
         rendered_blocks = template.render_blocks(context, target_blocks)
 
         # Get all our error handling out of the way before generating
