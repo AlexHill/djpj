@@ -7,18 +7,15 @@ deliver a faster browsing experience to users of your website.
 If you don't know what PJAX is, `read about how it works`__ below. In a
 nutshell, it makes navigating between pages on your website faster by loading
 only the part of the page that needs to change, rather than the whole thing.
+It's is a well-established technique; if you're reading this on GitHub, you
+probably loaded this content via PJAX.
 
 __ #how-does-pjax-work
 
-Most of our Django templates are already split into template blocks defining
-logical sections of our pages. With DjPj, your website will respond to PJAX
-requests with the contents of a specific template block of your choosing. You
-can also define PJAX-specific templates, and you can do all this *without
-altering any of your existing views* – so it's easy to add PJAX support to
+In a nutshell, your DjPj-enabled website will respond to PJAX requests with
+the contents of a single template block of your choosing. It requires no
+changes to your views, which means it's easy to add PJAX support to
 third-party Django apps.
-
-PJAX is a well-established technique. If you're reading this on GitHub, you
-probably loaded this content via PJAX.
 
 Getting started
 ===============
