@@ -10,12 +10,11 @@ def read(fname):
 
 setup(
     name='DjPj',
-    version='0.3.0',
+    version='0.3.1',
     description='A template-block-based Django helper for jQuery-PJAX.',
     license='BSD',
     long_description=read('README.rst'),
     url='https://github.com/alexhill/djpj',
-
     author='Alex Hill',
     author_email='alex@hill.net.au',
 
