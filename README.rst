@@ -35,8 +35,8 @@ __ https://github.com/defunkt/jquery-pjax
 ------------------------------
 
 First, make sure the views you're PJAXing return TemplateResponse__. DjPj works
-by changing the way your templates are rendered, so it doesn't work with
-pre-rendered ``HttpResponse``s.
+by changing the way your templates are rendered, so it won't work with a
+pre-rendered ``HttpResponse``.
 
 __ https://docs.djangoproject.com/en/dev/ref/template-response/
 
