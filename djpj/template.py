@@ -116,8 +116,7 @@ class DjPjTemplate(DjPjObject, Template):
     """
 
     def __patch__(self):
-        self._djpj_initialised_blocks = set()
-        self._initialise_blocks()
+        self._djpj_initialised_blocks = self._initialise_blocks()
 
     def _initialise_blocks(self):
         """
@@ -126,6 +125,7 @@ class DjPjTemplate(DjPjObject, Template):
         (but not BlockNodes themselves as they're not actually rendered from
         the template tree - see the source for BlockNode.render().
         """
+        blocks = dict()
         node_queue = queue.Queue()
         node_queue.put(self)
         while True:
@@ -136,12 +136,14 @@ class DjPjTemplate(DjPjObject, Template):
             if hasattr(node, 'nodelist'):
                 if isinstance(node, BlockNode):
                     DjPjNodeList.patch(node.nodelist, node.name)
-                    self._djpj_initialised_blocks.add(node.name)
+                    blocks[node.name] = node
                 for child_node in node.nodelist:
                     node_queue.put(child_node)
             if isinstance(node, ExtendsNode):
                 DjPjExtendsNode.patch(node)
         del node_queue
+
+        return blocks
 
     def render_blocks(self, context, blocks):
         """

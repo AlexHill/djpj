@@ -77,8 +77,7 @@ def pjax_template(template=pjaxify_template_var_with_container):
     return _make_pjax_decorator(process_response)
 
 
-def pjax_block(block=pjax_container,
-               title_variable=None, title_block=None):
+def pjax_block(block=pjax_container, title_variable=None, title_block=None):
     """
     A view decorator that, for PJAX requests, can return the contents of a
     single template block to the client instead of the whole page.

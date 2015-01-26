@@ -18,8 +18,8 @@ class DjangoPJAXMiddleware(object):
     """
 
     def __init__(self, config=None):
-        djpj_setting = (config or getattr(settings, 'DJPJ_PJAX_URLS', None))
-        self.decorated_urls = self.parse_configuration(djpj_setting or [])
+        djpj_setting = config or getattr(settings, 'DJPJ_PJAX_URLS', [])
+        self.decorated_urls = self.parse_configuration(djpj_setting)
 
     @staticmethod
     def parse_decorator(decorator_string):
@@ -43,11 +43,12 @@ class DjangoPJAXMiddleware(object):
         # Check that it starts with one, and then strip it.
         if not decorator_string.startswith('@'):
             raise error("expression should start with '@'")
+        decorator_string = decorator_string[1:]
 
-        expr = ast.parse(decorator_string[1:], '<string>', mode='eval')
         # Parse the remainder of the decorator string as Python code, and check
         # that it meets all of the conditions of our restricted Python syntax.
         # The error messages should explain what each block does.
+        expr = ast.parse(decorator_string, '<string>', mode='eval')
         if not isinstance(expr.body, ast.Call):
             raise error("decorator expression must be a single call "
                         "to pjax_block or pjax_template")
@@ -68,7 +69,7 @@ class DjangoPJAXMiddleware(object):
         return eval(compile(expr, '<string>', mode='eval'))
 
     @staticmethod
-    def parse_configuration(config_tuple):
+    def parse_configuration(config_seq):
         """
         Parse a sequence of (url_regex, pjax_decorators) pairs, returning a
         list of corresponding (compiled_regex, parsed_decorators) pairs. This
@@ -79,10 +80,9 @@ class DjangoPJAXMiddleware(object):
         listify = lambda d: d if isinstance(d, (list, tuple)) else [d]
 
         parse_fn = DjangoPJAXMiddleware.parse_decorator
-        return tuple(
-            (re.compile(url_regex),
-             [parse_fn(d) for d in reversed(listify(decorators))])
-            for url_regex, decorators in reversed(config_tuple))
+        return [(re.compile(url_regex),
+                 [parse_fn(d) for d in reversed(listify(decorators))])
+                for url_regex, decorators in reversed(config_seq)]
 
     def process_request(self, request):
         strip_pjax_parameter(request)
