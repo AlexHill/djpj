@@ -1,5 +1,6 @@
 *.egg-info
 *.pyc
 .coverage
+.DS_Store
 docs/_build/
 dist/
