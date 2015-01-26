@@ -4,6 +4,9 @@ from django.core.exceptions import ImproperlyConfigured
 settings.configure()
 settings.TEMPLATE_DIRS = ('tests/', '.')
 
+import django
+django.setup()
+
 from django.http import HttpResponseRedirect, HttpResponse
 from django.template import Template, TemplateSyntaxError
 from django.template.response import TemplateResponse
