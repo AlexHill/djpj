@@ -5,7 +5,8 @@ settings.configure()
 settings.TEMPLATE_DIRS = ('tests/', '.')
 
 import django
-django.setup()
+if django.VERSION >= (1, 7):
+    django.setup()
 
 from django.http import HttpResponseRedirect, HttpResponse
 from django.template import Template, TemplateSyntaxError
