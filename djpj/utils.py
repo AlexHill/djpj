@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from functools import partial
 import re
 
 
@@ -17,7 +18,7 @@ def pjax_container(request):
                          % container)
 
 
-def pjaxify_template_path(template_path, container):
+def pjaxify_template_path(template_path, container=None):
     """
     Take a template path and optionally a container, and return the path with
     "-pjax" and (if container is not None) "=<container>" inserted before the
@@ -37,7 +38,7 @@ def pjaxify_template_path(template_path, container):
     return ".".join(["%s-%s" % (parts[0], pjax_identifier)] + parts[1:])
 
 
-def transform_template_var(transform_fn, template_var, container=None):
+def transform_template_var(transform_fn, template_var):
     """
     Transform a template name or sequence of template names (as in the value of
     a TemplateResponse's "template_name" attribute) by applying transform_fn to
@@ -52,7 +53,7 @@ def transform_template_var(transform_fn, template_var, container=None):
     """
     if not isinstance(template_var, (list, tuple)):
         template_var = (template_var,)
-    template_pair = lambda name: (transform_fn(name, container), name)
+    template_pair = lambda name: (transform_fn(name), name)
     return type(template_var)(t for name in template_var
                               for t in template_pair(name))
 
@@ -67,14 +68,15 @@ def pjaxify_template_var(request, template_var):
 
 
 def pjaxify_template_var_with_container(request, template_var):
-    return transform_template_var(pjaxify_template_path, template_var,
-                                  container=pjax_container(request))
     """
     A template transform function suitable to be passed as the "template"
     argument to the pjax_template decorator. Transforms template_var using
     pjaxify_template_path with its container argument determined from the
     request using pjax_container.
     """
+    transform_fn = partial(pjaxify_template_path,
+                           container=pjax_container(request))
+    return transform_template_var(transform_fn, template_var)
 
 
 def is_pjax(request):
