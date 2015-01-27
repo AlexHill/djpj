@@ -1,3 +1,5 @@
+from django import VERSION as DJANGO_VERSION
+
 from django.template import TemplateSyntaxError, NodeList, Template
 
 # TODO: Find out why Django raises InvalidTemplateLibrary without this import.
@@ -186,14 +188,23 @@ class PJAXTemplateResponse(DjPjObject, SimpleTemplateResponse):
         title_block = self._djpj_title_block_name
         title_var = self._djpj_title_variable
 
-        # Get a Template and Context object
-        template = self.resolve_template(self.template_name)
-        context = self.resolve_context(self.context_data)
-
         # If no block name is specified, assume we're rendering a PJAX-specific
         # template and just return the rendered output.
         if not block:
-            return template.render(context)
+            return super(PJAXTemplateResponse, self).rendered_content
+
+        # Get a Template object
+        template = self.resolve_template(self.template_name)
+
+        # In Django 1.8, resolve_template doesn't return a django.template.Template
+        # but rather a django.template.backends.django.Template which has a
+        # django.template.Template as its "template" attribute. Template template.
+        # Also, resolve_context returns a backend-agnostic dict, not a Context.
+        if DJANGO_VERSION < (1, 8):
+            context = self.resolve_context(self.context_data)
+        else:
+            context = template._create_context(self.context_data, self._request)
+            template = template.template
 
         # Otherwise, proceed to capture the output from the pjax block and,
         # if specified, the title block or variable.
