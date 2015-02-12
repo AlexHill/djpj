@@ -1,7 +1,8 @@
 from django import VERSION as DJANGO_VERSION
 
 from django.template import TemplateSyntaxError, NodeList, Template
-from django.template.context import make_context
+if DJANGO_VERSION >= (1, 8):
+    from django.template.context import make_context
 
 # TODO: Find out why Django raises InvalidTemplateLibrary without this import.
 from django.template.loader import get_template
@@ -201,11 +202,11 @@ class PJAXTemplateResponse(DjPjObject, SimpleTemplateResponse):
         # but rather a django.template.backends.django.Template which has a
         # django.template.Template as its "template" attribute. Template template.
         # Also, resolve_context returns a backend-agnostic dict, not a Context.
-        if DJANGO_VERSION < (1, 8):
-            context = self.resolve_context(self.context_data)
-        else:
+        if DJANGO_VERSION >= (1, 8):
             context = make_context(self.context_data, self._request)
             template = template.template
+        else:
+            context = self.resolve_context(self.context_data)
 
         # Otherwise, proceed to capture the output from the pjax block and,
         # if specified, the title block or variable.
