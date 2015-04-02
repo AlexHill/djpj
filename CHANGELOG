@@ -1,0 +1,11 @@
+Version 0.4.0 (April 2, 2015)
+-----------------------------
+
+  * Support for Django 1.8's refactored template engine
+
+Version 0.3.2 (August 5, 2014)
+------------------------------
+
+  * Change name to DjPj
+  * First release to PyPI
+
