@@ -203,7 +203,8 @@ class PJAXTemplateResponse(DjPjObject, SimpleTemplateResponse):
         # django.template.Template as its "template" attribute. Template template.
         # Also, resolve_context returns a backend-agnostic dict, not a Context.
         if DJANGO_VERSION >= (1, 8):
-            context = make_context(self.context_data, self._request)
+            context = (make_context(self.context_data, self._request)
+                       if isinstance(self.context_data, dict) else self.context_data)
             template = template.template
         else:
             context = self.resolve_context(self.context_data)
