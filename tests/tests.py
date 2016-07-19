@@ -215,6 +215,7 @@ def test_pjax_overridden_block():
                                     {'base_template': base_template})
     assert response.rendered_content == "overridden secondary block content"
 
+
 def test_pjax_url_header():
     response = view_pjax_block_auto(pjax_request, test_template)
     assert response.has_header('X-PJAX-URL')
@@ -344,8 +345,7 @@ def test_pjax_static_template():
 
 
 def test_registry():
-    wrapped_classes = sorted([cls.__name__ for cls
-                              in djpj.template._wrapped_class_registry])
+    wrapped_classes = sorted(cls.__name__ for cls in djpj.template._wrapped_class_registry)
     assert wrapped_classes == ['ExtendsNode', 'NodeList', 'Template', 'TemplateResponse']
 
 
