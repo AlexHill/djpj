@@ -41,8 +41,13 @@ test_template = Template(
     "{% block secondary %}Some secondary content.{% endblock %}"
     "More text outside the main block.")
 
-base_template = Template("{% block main %}base block content{% endblock %}")
-extends_template = Template("{% extends base_template %}")
+base_template = Template(
+    "{% block main %}base block content{% endblock %}\n"
+    "{% block secondary %}secondary block content{% endblock %}")
+
+extends_template = Template(
+    "{% extends base_template %}\n"
+    "{% block secondary %}overridden {{ block.super }}{% endblock %}")
 
 
 # Tests.
@@ -179,6 +184,12 @@ def test_pjax_block_in_base_file_template():
                                {'base_template': file_template})
     assert response.rendered_content == "file base block content"
 
+
+def test_pjax_overridden_block():
+    view_secondary_block = pjax_block("secondary")(base_view)
+    response = view_secondary_block(pjax_request, extends_template,
+                                    {'base_template': base_template})
+    assert response.rendered_content == "overridden secondary block content"
 
 def test_pjax_url_header():
     response = view_pjax_block_auto(pjax_request, test_template)

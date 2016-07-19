@@ -108,7 +108,7 @@ class DjPjNodeList(DjPjObject, NodeList):
 class DjPjExtendsNode(DjPjObject, ExtendsNode):
     def get_parent(self, *args, **kwargs):
         parent = super(DjPjExtendsNode, self).get_parent(*args, **kwargs)
-        DjPjTemplate.patch(parent)
+        DjPjTemplate.patch(parent, exclude_blocks=self.blocks)
         return parent
 
 
@@ -119,10 +119,11 @@ class DjPjTemplate(DjPjObject, Template):
     sequence of block names you wish to render.
     """
 
-    def __patch__(self):
-        self._djpj_initialised_blocks = self._initialise_blocks()
+    def __patch__(self, exclude_blocks=None):
+        exclude_blocks = exclude_blocks or set()
+        self._djpj_initialised_blocks = self._initialise_blocks(exclude_blocks)
 
-    def _initialise_blocks(self):
+    def _initialise_blocks(self, excluded):
         """
         Walk the template tree and convert all necessary objects into their
         DjPj equivalents. This includes ExtendsNodes and BlockNodes' NodeLists
@@ -138,7 +139,7 @@ class DjPjTemplate(DjPjObject, Template):
             except queue.Empty:
                 break
             if hasattr(node, 'nodelist'):
-                if isinstance(node, BlockNode):
+                if isinstance(node, BlockNode) and node.name not in excluded:
                     DjPjNodeList.patch(node.nodelist, node.name)
                     blocks[node.name] = node
                 for child_node in node.nodelist:
