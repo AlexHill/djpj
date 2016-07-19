@@ -1,26 +1,50 @@
+import django
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-
-settings.configure()
-settings.TEMPLATE_DIRS = ('tests/', '.')
-
-import django
-if django.VERSION >= (1, 7):
-    django.setup()
-
 from django.http import HttpResponseRedirect, HttpResponse
 from django.template import Template, TemplateSyntaxError
 from django.template.response import TemplateResponse
-from django.test.client import RequestFactory
-
-from djpj.decorator import pjax_block, pjax_template
-from djpj.middleware import DjangoPJAXMiddleware
-from djpj.utils import *
-from djpj.template import PJAXTemplateResponse
-
-import djpj.template
 
 from nose.tools import raises, assert_raises
+
+import djpj.template
+from djpj.decorator import pjax_block, pjax_template
+from djpj.middleware import DjangoPJAXMiddleware
+from djpj.template import PJAXTemplateResponse
+from djpj.utils import *
+
+settings.configure()
+
+# This import has to go after settings.configure() in Django < 1.7
+from django.test.client import RequestFactory  # noqa
+
+# Do a bit of wrangling to make old Django look like new Django,
+# to avoid conditional branches in our tests themselves.
+if django.VERSION >= (1, 8):
+    from django.template.backends.django import DjangoTemplates, Template as DjangoTemplate
+
+    # The template API was refined in Django 1.9.
+    if django.VERSION < (1, 9):
+        class DjangoTemplate(DjangoTemplate):
+            def __init__(self, template, _):
+                super(DjangoTemplate, self).__init__(template)
+
+    settings.TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates',
+                           'DIRS': ['tests/', '.']}]
+else:
+    # Fake the DjangoTemplate class entirely, and set the template.attribute
+    # purely for call to DjPjTemplate.patch() in test_pjax_normal_request().
+    # noinspection PyPep8Naming
+    def DjangoTemplate(template, _):
+        template.template = template
+        return template
+    DjangoTemplates = None
+
+    settings.TEMPLATE_DIRS = ['tests/', '.']
+
+
+if django.VERSION >= (1, 7):
+    django.setup()
 
 # A couple of request objects - one PJAX, one not.
 rf = RequestFactory()
@@ -32,22 +56,22 @@ pjax_request = rf.get('/?_pjax=%23secondary',
 file_template = 'test_template.html'
 
 # A template to test the pjax_block decorator.
-test_template = Template(
+test_template = DjangoTemplate(Template(
     "{% block title %}Block Title{% endblock %}"
     "Some text outside the main block."
     "{% with footwear='galoshes' %}"
     "{% block main %}I'm wearing {{ colour }} {{ footwear }}{% endblock %}"
     "{% endwith %}"
     "{% block secondary %}Some secondary content.{% endblock %}"
-    "More text outside the main block.")
+    "More text outside the main block."), DjangoTemplates)
 
-base_template = Template(
+base_template = DjangoTemplate(Template(
     "{% block main %}base block content{% endblock %}\n"
-    "{% block secondary %}secondary block content{% endblock %}")
+    "{% block secondary %}secondary block content{% endblock %}"), DjangoTemplates)
 
-extends_template = Template(
+extends_template = DjangoTemplate(Template(
     "{% extends base_template %}\n"
-    "{% block secondary %}overridden {{ block.super }}{% endblock %}")
+    "{% block secondary %}overridden {{ block.super }}{% endblock %}"), DjangoTemplates)
 
 
 # Tests.
@@ -102,7 +126,7 @@ def test_pjax_block_no_result():
 
 def test_pjax_normal_request():
 
-    djpj.template.DjPjTemplate.patch(test_template)
+    djpj.template.DjPjTemplate.patch(test_template.template)
 
     resp = view_pjax_block(regular_request, test_template)
     result = resp.rendered_content
