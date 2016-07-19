@@ -18,19 +18,25 @@ settings.configure()
 # This import has to go after settings.configure() in Django < 1.7
 from django.test.client import RequestFactory  # noqa
 
+if django.VERSION >= (1, 7):
+    django.setup()
+
 # Do a bit of wrangling to make old Django look like new Django,
 # to avoid conditional branches in our tests themselves.
 if django.VERSION >= (1, 8):
-    from django.template.backends.django import DjangoTemplates, Template as DjangoTemplate
+    from django.template import engines
+    from django.template.backends.django import Template as DjangoTemplate
+
+    settings.TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates',
+                           'DIRS': ['tests/', '.']}]
+
+    template_backend = engines['django']
 
     # The template API was refined in Django 1.9.
     if django.VERSION < (1, 9):
         class DjangoTemplate(DjangoTemplate):
             def __init__(self, template, _):
                 super(DjangoTemplate, self).__init__(template)
-
-    settings.TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates',
-                           'DIRS': ['tests/', '.']}]
 else:
     # Fake the DjangoTemplate class entirely, and set the template.attribute
     # purely for call to DjPjTemplate.patch() in test_pjax_normal_request().
@@ -38,13 +44,10 @@ else:
     def DjangoTemplate(template, _):
         template.template = template
         return template
-    DjangoTemplates = None
+    template_backend = None
 
     settings.TEMPLATE_DIRS = ['tests/', '.']
 
-
-if django.VERSION >= (1, 7):
-    django.setup()
 
 # A couple of request objects - one PJAX, one not.
 rf = RequestFactory()
@@ -63,15 +66,15 @@ test_template = DjangoTemplate(Template(
     "{% block main %}I'm wearing {{ colour }} {{ footwear }}{% endblock %}"
     "{% endwith %}"
     "{% block secondary %}Some secondary content.{% endblock %}"
-    "More text outside the main block."), DjangoTemplates)
+    "More text outside the main block."), template_backend)
 
 base_template = DjangoTemplate(Template(
     "{% block main %}base block content{% endblock %}\n"
-    "{% block secondary %}secondary block content{% endblock %}"), DjangoTemplates)
+    "{% block secondary %}secondary block content{% endblock %}"), template_backend)
 
 extends_template = DjangoTemplate(Template(
     "{% extends base_template %}\n"
-    "{% block secondary %}overridden {{ block.super }}{% endblock %}"), DjangoTemplates)
+    "{% block secondary %}overridden {{ block.super }}{% endblock %}"), template_backend)
 
 
 # Tests.
