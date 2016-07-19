@@ -58,7 +58,13 @@ class DjangoPJAXMiddleware(object):
             raise error("decorator expression must be a single call "
                         "to pjax_block or pjax_template")
 
-        if not (call.starargs is None and call.kwargs is None):
+        import sys
+        if sys.version_info < (3, 5):
+            starargs = not (call.starargs is None and call.kwargs is None)
+        else:
+            starargs = (any(isinstance(arg, ast.Starred) for arg in call.args) or
+                        any(kw.arg is None for kw in call.keywords))
+        if starargs:
             raise error("unpacking * and ** arguments is not supported")
 
         if not all(isinstance(arg, ast.Str) for arg
