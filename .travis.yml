@@ -65,6 +65,6 @@ matrix:
        env: DJANGO_VERSION=1.11
 install:
   - pip install django==$DJANGO_VERSION nose
-  - pip install . --use-mirrors
+  - pip install .
 script:
   - nosetests tests/tests.py
