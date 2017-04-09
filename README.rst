@@ -1,3 +1,10 @@
+.. image:: https://img.shields.io/pypi/v/djpj.svg
+    :target: https://pypi.python.org/pypi/DjPj
+.. image:: https://travis-ci.org/AlexHill/djpj.svg?branch=master
+    :target: https://travis-ci.org/AlexHill/djpj
+.. image:: https://coveralls.io/repos/github/AlexHill/djpj/badge.svg?branch=master
+    :target: https://coveralls.io/github/AlexHill/djpj?branch=master
+
 Overview of DjPj (formerly Django-PJAX-Blocks)
 ==============================================
 
