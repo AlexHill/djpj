@@ -66,7 +66,7 @@ matrix:
 install:
   - pip install -r test-requirements.txt
   - pip install "django==$DJANGO_VERSION.*"
-  - pip install .
+  - pip install -e .
 script:
   - py.test --cov=djpj tests/tests.py
 after_success:
