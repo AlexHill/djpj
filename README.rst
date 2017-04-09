@@ -183,8 +183,8 @@ Testing
 
 Tests are run using nose. To install::
 
-    pip install nose
+    pip install pytest
 
 And to run the tests::
 
-    nosetests tests.py
+    py.test

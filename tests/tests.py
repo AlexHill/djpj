@@ -5,7 +5,7 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.template import Template, TemplateSyntaxError
 from django.template.response import TemplateResponse
 
-from nose.tools import raises, assert_raises
+import pytest
 
 import djpj.template
 from djpj.decorator import pjax_block, pjax_template
@@ -84,31 +84,31 @@ def test_pjax_block_from_header():
     assert pjax_container(req) == "soviet_bloc"
 
 
-@raises(ValueError)
 def test_pjax_block_invalid_from_header():
     req = rf.get('/', HTTP_X_PJAX=True, HTTP_X_PJAX_CONTAINER="#soviet .bloc")
-    _ = pjax_container(req)
+    with pytest.raises(ValueError):
+        _ = pjax_container(req)
 
 
-@raises(KeyError)
 def test_pjax_block_no_pjax_container():
     request = rf.get('/', HTTP_X_PJAX=True)
-    _ = view_pjax_block_auto(request, None)
+    with pytest.raises(KeyError):
+        _ = view_pjax_block_auto(request, None)
 
 
-@raises(ValueError)
 def test_pjax_block_none_arg():
-    pjax_block(None)
+    with pytest.raises(ValueError):
+        pjax_block(None)
 
 
-@raises(ValueError)
 def test_pjax_template_none_arg():
-    pjax_template(None)
+    with pytest.raises(ValueError):
+        pjax_template(None)
 
 
-@raises(ValueError)
 def test_pjax_template_no_result():
-    _ = pjax_template(lambda *a, **kw: None)(base_view)(pjax_request, test_template)
+    with pytest.raises(ValueError):
+        _ = pjax_template(lambda *a, **kw: None)(base_view)(pjax_request, test_template)
 
 
 def test_pjax_template_auto():
@@ -160,11 +160,11 @@ def test_pjax_block():
     assert result == "I'm wearing orange galoshes"
 
 
-@raises(TemplateSyntaxError)
 def test_pjax_block_error():
     view = pjax_block("main_missing")(base_view)
     resp = view(pjax_request, test_template)
-    _ = resp.rendered_content
+    with pytest.raises(TemplateSyntaxError):
+        _ = resp.rendered_content
 
 
 def test_pjax_block_title_variable():
@@ -174,11 +174,11 @@ def test_pjax_block_title_variable():
     assert result == "<title>Variable Title</title>\nI'm wearing orange galoshes"
 
 
-@raises(KeyError)
 def test_pjax_block_title_variable_error():
     view = pjax_block("main", title_variable="title_missing")(base_view)
     resp = view(pjax_request, test_template, {'title': 'Variable Title'})
-    _ = resp.rendered_content
+    with pytest.raises(KeyError):
+        _ = resp.rendered_content
 
 
 def test_pjax_block_title_block():
@@ -188,16 +188,16 @@ def test_pjax_block_title_block():
     assert result == "<title>Block Title</title>\nI'm wearing orange galoshes"
 
 
-@raises(TemplateSyntaxError)
 def test_pjax_block_title_block_error():
     view = pjax_block("main", title_block="title_missing")(base_view)
     resp = view(pjax_request, test_template)
-    _ = resp.rendered_content
+    with pytest.raises(TemplateSyntaxError):
+        _ = resp.rendered_content
 
 
-@raises(ValueError)
 def test_pjax_block_title_conflict():
-    pjax_block("main", title_variable="title", title_block="title")(None)
+    with pytest.raises(ValueError):
+        pjax_block("main", title_variable="title", title_block="title")(None)
 
 
 def test_pjax_block_in_base_template():
@@ -297,9 +297,8 @@ def test_middleware_invalid_decorator():
     )
 
     for decorator in decorator_mistakes:
-        assert_raises(ImproperlyConfigured,
-                      DjangoPJAXMiddleware.parse_decorator,
-                      decorator)
+        with pytest.raises(ImproperlyConfigured):
+            DjangoPJAXMiddleware.parse_decorator(decorator)
 
 
 def test_strip_pjax_qs_parameter():
@@ -310,14 +309,14 @@ def test_strip_pjax_qs_parameter():
     assert strip_fn('first=1&_pjax=%23container&second=2') == 'first=1&second=2'
 
 
-@raises(TypeError)
 def test_exception_on_non_deferred_response():
-    _ = view_pjax_block_not_deferred(pjax_request)
+    with pytest.raises(TypeError):
+        _ = view_pjax_block_not_deferred(pjax_request)
 
 
-@raises(ValueError)
 def test_pjaxify_instance_error():
-    pjaxify_template_path(test_template, None)
+    with pytest.raises(ValueError):
+        pjaxify_template_path(test_template, None)
 
 
 def test_pjaxify_template_var():
@@ -352,10 +351,10 @@ def test_registry():
     assert wrapped_classes == ['ExtendsNode', 'NodeList', 'Template', 'TemplateResponse']
 
 
-@raises(NotImplementedError)
 def test_object_wrapping_direct_instantiation():
     response = base_view(pjax_request, test_template)
-    PJAXTemplateResponse(response, None, None)
+    with pytest.raises(NotImplementedError):
+        PJAXTemplateResponse(response, None, None)
 
 
 # The test "views" themselves.
