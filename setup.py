@@ -10,7 +10,7 @@ def read(fname):
 
 setup(
     name='DjPj',
-    version='0.5.0',
+    version='0.6.0',
     description='A template-block-based Django helper for jQuery-PJAX.',
     license='BSD',
     long_description=read('README.rst').replace('\n__ #', '\n__ https://pypi.python.org/pypi/DjPj/#'),
@@ -38,6 +38,7 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Programming Language :: Python :: Implementation :: CPython',
     ],
