@@ -64,7 +64,8 @@ matrix:
      - python: "pypy3"
        env: DJANGO_VERSION=1.11
 install:
-  - pip install "django==$DJANGO_VERSION.*" coveralls coverage pytest-cov
+  - pip install -r test-requirements.txt
+  - pip install "django==$DJANGO_VERSION.*"
   - pip install .
 script:
   - py.test --cov=djpj tests/tests.py

@@ -1,2 +1,4 @@
-django >= 1.4
-nose
+coverage
+coveralls
+pytest
+pytest-cov
