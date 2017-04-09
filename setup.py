@@ -42,3 +42,33 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
     ],
 )
+
+
+def version_exclusions():
+
+    def vstr(v):
+        return '.'.join(map(str, v))
+
+    pythons = [(2, 6), (2, 7)] + [(3, n) for n in range(3, 7)]
+    djangos = [(1, n) for n in range(4, 12)]
+    exclusions = [
+        lambda p, d: p <= (2, 6) and d > (1, 6),
+        lambda p, d: p >= (3, 3) and d < (1, 5),
+        lambda p, d: p == (3, 3) and d > (1, 8),
+        lambda p, d: p >= (3, 5) and d < (1, 8),
+    ]
+    excluded = {
+        (vstr(p), d) for p in pythons for d in djangos
+        if any(e(p, d) for e in exclusions)
+    }
+    aliases = {
+        '3.3': 'pypy3',
+        '2.7': 'pypy',
+    }
+    excluded |= {(aliases[p], d) for p, d in excluded if p in aliases}
+
+    return "\n".join(
+        "     - python: \"%s\"\n"
+        "       env: DJANGO_VERSION=%s" % (p, vstr(d))
+        for p, d in sorted(excluded)
+    )
